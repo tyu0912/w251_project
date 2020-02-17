@@ -1,3 +1,7 @@
+#model files
+docker_images/TF-SimpleHumanPose-steph/output/model_dump/COCO/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

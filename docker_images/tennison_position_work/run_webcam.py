@@ -12,7 +12,9 @@ logger = logging.getLogger('TfPoseEstimator-WebCam')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
+
 formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
+
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
@@ -60,6 +62,8 @@ if __name__ == '__main__':
 
         logger.debug('image process+')
         humans = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=args.resize_out_ratio)
+        
+        print(humans)
 
         logger.debug('postprocess+')
         image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)

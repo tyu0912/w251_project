@@ -2,7 +2,6 @@
 
 FROM orangelabschina/pose_estimation_arm64:cpu-manylibs
 
-#RUN rm /workplace/tf-openpose/run_stream_flaskvideo.py
 COPY . /workplace/tf-openpose/
 
 WORKDIR /workplace/tf-openpose/

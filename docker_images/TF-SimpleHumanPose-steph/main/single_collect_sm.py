@@ -42,8 +42,10 @@ from tfflat.utils import mem_info
 from model import Model
 
 from gen_batch_single import generate_batch
-
 from nms.nms import oks_nms
+
+
+f = open("/posenet-out/camera-{t}.txt".format(t=datetime.now()), 'w')
 
 
 def test_net(tester, img):
@@ -55,9 +57,14 @@ def test_net(tester, img):
     kps_result = np.zeros((cfg.num_kps, 3))
 
     d = {"img": img, 'bbox' : [0,0,img.shape[1],img.shape[0]]}
-
-    trans_img, crop_info = generate_batch(d, stage='test')
     
+    try:
+        trans_img, crop_info = generate_batch(d, stage='test')
+    except:
+        print("Error Here")
+        print(trans_img)
+
+
     # forward
     heatmap = tester.predict_one([[trans_img]])[0]
             
@@ -82,13 +89,28 @@ def test_net(tester, img):
        kps_result[j, 0] = kps_result[j, 0] / cfg.input_shape[1] * (crop_info[2] - crop_info[0]) + crop_info[0]
        kps_result[j, 1] = kps_result[j, 1] / cfg.input_shape[0] * (crop_info[3] - crop_info[1]) + crop_info[1]
                 
-    if np.any(kps_result[:,2] > 0.9):
-        tmpimg = img         
-        tmpimg = tmpimg.astype('uint8')
+    tmpimg = img.astype('uint8')
+    tmpkps = np.zeros((3,cfg.num_kps))
+    tmpkps[:2,:] = kps_result[:, :2].transpose(1,0)
+    tmpkps[2,:] = kps_result[:, 2]
 
-        tmpkps = np.zeros((3,cfg.num_kps))
-        tmpkps[:2,:] = kps_result[:, :2].transpose(1,0)
-        tmpkps[2,:] = kps_result[:, 2]
+    headers = ["nose-x", "nose-y", "nose-w",
+            "eye_l-x", "eye_l-y", "eye_l-w",
+            "eye_r-x", "eye_r-y", "eye_r-w",
+            "ear_l-x", "ear_l-y", "ear_l-w",
+            "ear_r-x", "ear_r-y", "ear_r-w",
+            "shldr_l-x", "shldr_l-y", "shldr_l-w",
+            "shldr_r-x", "shldr_r-y", "shldr_r-w",
+            "elbw_l-x", "elbw_l-y", "elbw_l-w",
+            "elbw_r-x", "elbw_r-y", "elbw_r-w",
+            "wrst_l-x", "wrst_l-y", "wrst_l-w",
+            "wrst_r-x", "wrst_r-y", "wrst_r-w"]
+
+    if np.any(kps_result[:,2] > 0.9):        
+
+        #tmpkps = np.zeros((3,cfg.num_kps))
+        #tmpkps[:2,:] = kps_result[:, :2].transpose(1,0)
+        #tmpkps[2,:] = kps_result[:, 2]
 
         kps = {}
         kps["nose"] = {"x": tmpkps[0][0], "y": tmpkps[1][0], "w": tmpkps[2][0]}
@@ -125,12 +147,17 @@ def test_net(tester, img):
 
         if(kps["shldr_l"]["w"] > 0.4 and kps["shldr_r"]["w"] > 0.4 and kps["nose"]["w"] > 0.4 and kps["eye_l"]["w"] > 0.4 and kps["eye_r"]["w"] > 0.4):
 
-           shoulder_mid = mid(kps["shldr_l"]["x"], kps["shldr_l"]["y"], kps["shldr_r"]["x"], kps["shldr_r"]["y"])
-           nose_elevation = cdist(kps["nose"]["x"], kps["nose"]["y"], shoulder_mid[0], shoulder_mid[1])
-           eye_spacing = cdist(kps["eye_l"]["x"], kps["eye_l"]["y"], kps["eye_r"]["x"], kps["eye_r"]["y"])
+            shoulder_mid = mid(kps["shldr_l"]["x"], kps["shldr_l"]["y"], kps["shldr_r"]["x"], kps["shldr_r"]["y"])
+            nose_elevation = cdist(kps["nose"]["x"], kps["nose"]["y"], shoulder_mid[0], shoulder_mid[1])
+            eye_spacing = cdist(kps["eye_l"]["x"], kps["eye_l"]["y"], kps["eye_r"]["x"], kps["eye_r"]["y"])
+ 
+            kps["shoulder_mid"] = shoulder_mid
+            kps["nose_elevation"] = nose_elevation
+            kps["eye_spacing"] = eye_spacing
 
-           nose_ratio = nose_elevation / eye_spacing
-
+            nose_ratio = nose_elevation / eye_spacing
+            kps["nose_ratio"] = nose_ratio
+    
         print("\nNose Angle Ratio\t{:.1f}".format(nose_ratio)) 
           
         if(kps["shldr_l"]["w"] > 0.4 and kps["shldr_r"]["w"] > 0.4 and kps["nose"]["w"] > 0.4 and kps["eye_l"]["w"] > 0.4 and kps["eye_r"]["w"] > 0.4):
@@ -139,7 +166,12 @@ def test_net(tester, img):
             shoulder_nose_left = cdist(kps["shldr_l"]["x"], kps["shldr_l"]["y"], kps["nose"]["x"], kps["nose"]["y"])
             shoulder_nose_right = cdist(kps["shldr_r"]["x"], kps["shldr_r"]["y"], kps["nose"]["x"], kps["nose"]["y"])
 
+            kps["shoulder_spacing"] = shoulder_spacing
+            kps["shoulder_nose_left"] = shoulder_nose_left
+            kps["shoulder_nose_right"] = shoulder_nose_right
+            
             nose_shoulder_perp = tri_height(shoulder_nose_left, shoulder_spacing, shoulder_nose_right) / eye_spacing
+            kps["nose_shoulder_perp"] = nose_shoulder_perp
 
         print("Nose Perp Angle Ratio\t{:.1f}".format(nose_shoulder_perp)) 
 
@@ -148,7 +180,11 @@ def test_net(tester, img):
             eye_slope = math.degrees(math.atan((kps["eye_l"]["y"] - kps["eye_r"]["y"])/(kps["eye_l"]["x"] - kps["eye_r"]["x"])))
             shldr_slope = math.degrees(math.atan((kps["shldr_l"]["y"] - kps["shldr_r"]["y"])/(kps["shldr_l"]["x"] - kps["shldr_r"]["x"])))
 
+            kps["eye_slope"] = eye_slope
+            kps["shldr_slope"] = shldr_slope
+            
             eye_shldr_angle = eye_slope - shldr_slope
+            kps["eye_shldr_angle"] = eye_shldr_angle
 
         print("Eye Shldr Angle\t\t{:.1f}".format(eye_shldr_angle))
  
@@ -157,14 +193,24 @@ def test_net(tester, img):
             arm_left = cdist(kps["shldr_l"]["x"], kps["shldr_l"]["y"], kps["elbw_l"]["x"], kps["elbw_l"]["y"])
             diag_left = cdist(kps["elbw_l"]["x"], kps["elbw_l"]["y"], kps["shldr_r"]["x"], kps["shldr_r"]["y"])
 
+            kps["arm_left"] = arm_left
+            kps["diag_left"] = diag_left
+
             arm_angle_left = cos_angle(arm_left, shoulder_spacing, diag_left)
- 
+            
+            kps["arm_angle_left"] = arm_angle_left
+
+
         if(kps["shldr_l"]["w"] > 0.4 and kps["shldr_r"]["w"] > 0.4 and kps["elbw_r"]["w"] > 0.4):
 
             arm_right = cdist(kps["shldr_r"]["x"], kps["shldr_r"]["y"], kps["elbw_r"]["x"], kps["elbw_r"]["y"])
             diag_right = cdist(kps["elbw_r"]["x"], kps["elbw_r"]["y"], kps["shldr_l"]["x"], kps["shldr_l"]["y"])
 
             arm_angle_right = cos_angle(arm_right, shoulder_spacing, diag_right)
+
+            kps["arm_right"] = arm_right
+            kps["diag_right"] = diag_right
+            kps["arm_angle_right"] = arm_angle_right
 
         print("Left Arm Angle\t\t{:.1f}".format(arm_angle_left))
         print("Right Arm Angle\t\t{:.1f}".format(arm_angle_right))
@@ -173,66 +219,22 @@ def test_net(tester, img):
 
             ear_eye_left = math.degrees(math.atan((kps["eye_l"]["y"] - kps["ear_l"]["y"])/(kps["eye_l"]["x"] - kps["ear_l"]["x"])))
 
+            kps["ear_eye_left"] = ear_eye_left
+
         if(kps["eye_r"]["w"] > 0.4 and kps["ear_r"]["w"]):       
 
             ear_eye_right = math.degrees(math.atan((kps["eye_r"]["y"] - kps["ear_r"]["y"])/(kps["ear_r"]["x"] - kps["eye_r"]["x"])))
 
+            kps["ear_eye_right"] = ear_eye_right
+
         print("Left E-E Angle\t\t{:.1f}".format(ear_eye_left))
         print("Right E-E Angle\t\t{:.1f}".format(ear_eye_right))
 
-
-
-
-
-#        print("(G)ood or (B)ad posture?")
-#
-#        key = ""
-#        while(key != 'G' and key != 'B'):
-#            print(">", end = '')            
-#            key = readchar.readkey().upper()            
-#            print(key)
-#
-#        keyword = ""
-#        if(key == 'G'):
-#            keyword = "good"
-#        else:
-#            keyword = "bad"
-#
-#        seconds = int(time.time())
-#
-#        cv2.imwrite(osp.join(cfg.vis_dir, keyword + "_" + str(seconds) + '.jpg'), tmpimg)
-#
-#        df = pd.DataFrame.from_dict(kps)
-#
-#        df.to_csv(osp.join(cfg.vis_dir, keyword + "_" + str(seconds) + '_kp.csv'))
-#
-#        df = pd.DataFrame({'nose_ratio': nose_ratio,
-#            'nose_shoulder_perp': nose_shoulder_perp,
-#            'eye_shldr_angle': eye_shldr_angle,
-#            'arm_angle_left': arm_angle_left,
-#            'arm_angle_right': arm_angle_right,
-#            'ear_eye_left': ear_eye_left,
-#            'ear_eye_right': ear_eye_right}, index = [0])
-#
-#        df.to_csv(osp.join(cfg.vis_dir, keyword + "_" + str(seconds) + '_feat.csv'))
-
-#        print("Stored!")
-
         tmpimg = cfg.vis_keypoints(tmpimg, tmpkps)
-        #cv2.waitKey(0)
 
-#        plt.ion()
 
-#        fig, ax = plt.subplots()
-#        im1 = ax.imshow(tmpimg[:,:,[2,1,0]])
-#        ani = FuncAnimation(plt.gcf(), test_net, interval=100)
-#        plt.show()
-        #plt.ion()
-        #time.sleep(0.2) #steph
-        #plt.close() #steph
+    return tmpimg, tmpkps, kps
 
-    #return dump_results
-    return tmpimg, tmpkps
 
 def update(i):
     im1.set_data(ax.imshow(tmpimg[:,:,[2,1,0]]))
@@ -256,10 +258,13 @@ def cdist(x1, y1, x2, y2):
 
 def test(test_model, device):
 
+    to_csv = []
+    headers = set()
+
     tester = Tester(Model(), cfg)
     tester.load_weights(test_model)
 
-    cap = cv2.VideoCapture(device)
+    cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
@@ -269,23 +274,17 @@ def test(test_model, device):
 
         ret, img = cap.read()
         
-#        if(time.time() > last + 150):
         if(time.time() > last + 0.05):
-            tmpimg, tmpkps = test_net(tester, img)    
-            #ani = FuncAnimation(plt.gcf(), test_net, img, interval=100)
-            #plt.show()
             
+    
+            tmpimg, tmpkps = test_net(tester, img)
+
             cv2.namedWindow('vis',0)
             cv2.imshow('vis', tmpimg[:,:,[2,1,0]])
-#        cv2.imshow('vis', img)
-            k=cv2.waitKey(10) & 0XFF
-            #if k== 27 :
-            #    break
-            #cv2.imwrite(osp.join(cfg.vis_dir, str(img_id2) + '.jpg'), tmpimg)
-            #cv2.imshow('vis', img)
+            k=cv2.waitKey(10) & 0xFF
             
-            last = time.time()
         
+        last = time.time()
 
 
 if __name__ == '__main__':
@@ -295,12 +294,11 @@ if __name__ == '__main__':
         parser.add_argument('--test_epoch', type=str, dest='test_epoch')
         parser.add_argument('--device', type=int, dest='device')
         args = parser.parse_args()
-
-
         
         assert args.test_epoch, 'Test epoch is required.'
         assert args.device, 'Device number is required.'
         return args
+
 
     global args
     args = parse_args()

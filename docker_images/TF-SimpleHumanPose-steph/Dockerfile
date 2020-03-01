@@ -35,6 +35,7 @@ ENV NO_AT_BRIDGE=1 \
     MQTT_QOS=0
 
 RUN apt-get install -y mosquitto-clients speech-dispatcher
+RUN mkdir /posenet-out
 
 EXPOSE 1883
 

@@ -20,6 +20,7 @@ from config import cfg
 import cv2
 import sys
 import time
+from datetime import datetime
 import json
 from PIL import Image
 import matplotlib
@@ -45,8 +46,25 @@ from gen_batch_single import generate_batch
 from nms.nms import oks_nms
 
 
-f = open("/posenet-out/camera-{t}.txt".format(t=datetime.now()), 'w')
+f = open("/posenet-out/camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
 
+headers = ["nose-x", "nose-y", "nose-w",
+            "eye_l-x", "eye_l-y", "eye_l-w",
+            "eye_r-x", "eye_r-y", "eye_r-w",
+            "ear_l-x", "ear_l-y", "ear_l-w",
+            "ear_r-x", "ear_r-y", "ear_r-w",
+            "shldr_l-x", "shldr_l-y", "shldr_l-w",
+            "shldr_r-x", "shldr_r-y", "shldr_r-w",
+            "elbw_l-x", "elbw_l-y", "elbw_l-w",
+            "elbw_r-x", "elbw_r-y", "elbw_r-w",
+            "wrst_l-x", "wrst_l-y", "wrst_l-w",
+            "wrst_r-x", "wrst_r-y", "wrst_r-w", 
+            "shoulder_mid",  "nose_elevation",  "eye_spacing", "nose_ratio",  
+            "shoulder_spacing", "shoulder_nose_left",  "shoulder_nose_right", "nose_shoulder_perp"
+             "eye_slope",  "shldr_slope",  "eye_shldr_angle", "arm_left",  "diag_left", "arm_angle_left",  
+             "arm_right",  "diag_right",  "arm_angle_right", "ear_eye_left",  "ear_eye_right"]
+             
+f.write('\t'.join(headers) + '\n')
 
 def test_net(tester, img):
 
@@ -93,19 +111,7 @@ def test_net(tester, img):
     tmpkps = np.zeros((3,cfg.num_kps))
     tmpkps[:2,:] = kps_result[:, :2].transpose(1,0)
     tmpkps[2,:] = kps_result[:, 2]
-
-    headers = ["nose-x", "nose-y", "nose-w",
-            "eye_l-x", "eye_l-y", "eye_l-w",
-            "eye_r-x", "eye_r-y", "eye_r-w",
-            "ear_l-x", "ear_l-y", "ear_l-w",
-            "ear_r-x", "ear_r-y", "ear_r-w",
-            "shldr_l-x", "shldr_l-y", "shldr_l-w",
-            "shldr_r-x", "shldr_r-y", "shldr_r-w",
-            "elbw_l-x", "elbw_l-y", "elbw_l-w",
-            "elbw_r-x", "elbw_r-y", "elbw_r-w",
-            "wrst_l-x", "wrst_l-y", "wrst_l-w",
-            "wrst_r-x", "wrst_r-y", "wrst_r-w"]
-
+    
     if np.any(kps_result[:,2] > 0.9):        
 
         #tmpkps = np.zeros((3,cfg.num_kps))
@@ -232,8 +238,17 @@ def test_net(tester, img):
 
         tmpimg = cfg.vis_keypoints(tmpimg, tmpkps)
 
-
-    return tmpimg, tmpkps, kps
+        out = []
+        for h in headers:
+            keys = h.split("-")
+            if len(keys) > 1:
+                out.append(str(kps.get(keys[0],  None).get(keys[1], None)))
+            else:
+                out.append(str(kps.get(keys[0],  None)))
+    
+        f.write('\t'.join(out) + '\n')
+    
+    return tmpimg, tmpkps
 
 
 def update(i):
@@ -263,8 +278,11 @@ def test(test_model, device):
 
     tester = Tester(Model(), cfg)
     tester.load_weights(test_model)
-
-    cap = cv2.VideoCapture(0)
+    
+    
+    cap = cv2.VideoCapture(device)
+    
+    
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 

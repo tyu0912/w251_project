@@ -4,6 +4,9 @@
 
 To run any of the scripts, you must first build the Docker image:
 
+From TY
+make a folder called: `/posenet`
+
 ```bash
 # on the jetson
 $ cd TF-SimpleHumanPose
@@ -27,6 +30,7 @@ Once the image is built you can run the following tasks. They should all be exec
 $ docker run --privileged \
  -v `pwd`/output:/usr/src/app/output \
  -v /tmp/.X11-unix:/tmp/.X11-unix \
+ -v /posenet:/posenet-out \
  -it \
  -e DISPLAY \
  posture python3 single_collect_sm.py --test_epoch 140 --device $DEVICE #Steph Edit

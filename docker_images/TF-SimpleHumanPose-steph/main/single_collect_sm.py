@@ -48,7 +48,7 @@ from nms.nms import oks_nms
 
 f = open("/posenet-out/camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
 
-headers = ["nose-x", "nose-y", "nose-w",
+headers = ["time","nose-x", "nose-y", "nose-w",
             "eye_l-x", "eye_l-y", "eye_l-w",
             "eye_r-x", "eye_r-y", "eye_r-w",
             "ear_l-x", "ear_l-y", "ear_l-w",
@@ -66,11 +66,13 @@ headers = ["nose-x", "nose-y", "nose-w",
              
 f.write('\t'.join(headers) + '\n')
 
+start_time = time.time()
+
 def test_net(tester, img):
 
     dump_results = []
 
-    start_time = time.time()
+    inference_time = time.time()
 
     kps_result = np.zeros((cfg.num_kps, 3))
 
@@ -246,7 +248,7 @@ def test_net(tester, img):
             else:
                 out.append(str(kps.get(keys[0],  None)))
     
-        f.write('\t'.join(out) + '\n')
+        f.write(str(inference_time - start_time) + '\t' + '\t'.join(out) + '\n')
     
     return tmpimg, tmpkps
 

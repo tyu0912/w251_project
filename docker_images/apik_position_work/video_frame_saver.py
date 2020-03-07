@@ -1,6 +1,6 @@
 import cv2
 import time
-vidcap = cv2.VideoCapture('chute04_cam8_1s.m4v')
+vidcap = cv2.VideoCapture('./frames/chute04_cam8_1s.m4v')
 success,image = vidcap.read()
 count = 10
 offset = 0

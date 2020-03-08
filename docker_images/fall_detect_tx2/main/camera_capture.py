@@ -46,8 +46,7 @@ from gen_batch_single import generate_batch
 from nms.nms import oks_nms
 
 
-f = open("/posenet-out/camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
-#f = open("./camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
+f = open("../video_processing_output/camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
 
 headers = ["time","nose-x", "nose-y", "nose-w",
             "eye_l-x", "eye_l-y", "eye_l-w",
@@ -77,13 +76,14 @@ def test_net(tester, img):
 
     kps_result = np.zeros((cfg.num_kps, 3))
 
-    d = {"img": img, 'bbox' : [0,0,img.shape[1],img.shape[0]]}    
-
+    d = {"img": img, 'bbox' : [0,0,img.shape[1],img.shape[0]]}
+    
     try:
         trans_img, crop_info = generate_batch(d, stage='test')
     except:
         print("Error Here")
-        print(trans_img)    
+        print(trans_img)
+
 
     # forward
     heatmap = tester.predict_one([[trans_img]])[0]
@@ -249,6 +249,7 @@ def test_net(tester, img):
                 out.append(str(kps.get(keys[0],  None)))
     
         f.write(str(inference_time - start_time) + '\t' + '\t'.join(out) + '\n')
+    
     return tmpimg, tmpkps
 
 
@@ -280,8 +281,8 @@ def test(test_model, device):
     tester = Tester(Model(), cfg)
     tester.load_weights(test_model)
     
-    device = 0
-    cap = cv2.VideoCapture(1)
+    
+    cap = cv2.VideoCapture(device)
     
     
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
@@ -291,7 +292,7 @@ def test(test_model, device):
 
     while True:
 
-        ret, img = cap.read() # Apik
+        ret, img = cap.read()
         
         if(time.time() > last + 0.05):
             
@@ -305,41 +306,6 @@ def test(test_model, device):
         
         last = time.time()
 
-def capture_frames(test_model, device, vid_dir):
-    import os
-    # vid_loc = vid_dir + '/apik.m4v'
-    # print("Vid location = " + str(vid_loc))
-
-    print("Current dir")
-    print(os.getcwd())
-    for filename in os.listdir(vid_dir):
-        if filename.endswith(".m4v"):
-            print("Current file = " + filename)
-            vid_loc = vid_dir + '/' + filename
-            vidcap = cv2.VideoCapture(vid_loc)
-
-            success,image = vidcap.read()
-            count = 10
-            offset = 0
-            if success:
-                print("Success")
-            else:
-                print("Failed")
-            to_csv = []
-            headers = set()
-
-            tester = Tester(Model(), cfg)
-            tester.load_weights(test_model)
-
-            while success:
-                success,image = vidcap.read()
-                if offset % 3 == 0:
-                    tmpimg, tmpkps = test_net(tester, image)
-                    cv2.imwrite("../frames/pose_frame%d.jpg" % count, image)     # save frame as JPEG file 
-                    cv2.imwrite("../frames/pose_frame_coords%d.jpg" % count, tmpimg)     # save frame with coordinates
-                    print('Read a new frame: ', success)
-                    count += 1
-                offset += 1
 
 if __name__ == '__main__':
     def parse_args():
@@ -347,16 +313,13 @@ if __name__ == '__main__':
 
         parser.add_argument('--test_epoch', type=str, dest='test_epoch')
         parser.add_argument('--device', type=int, dest='device')
-        parser.add_argument('--video_dir', type=str, dest='vid_dir')
         args = parser.parse_args()
         
         assert args.test_epoch, 'Test epoch is required.'
         assert args.device, 'Device number is required.'
-        assert args.vid_dir, 'Video directory is required.'
         return args
 
 
     global args
-    args = parse_args()# AZ
-    #test(int(args.test_epoch), int(args.device))
-    capture_frames(int(args.test_epoch), int(args.device), str(args.vid_dir))
+    args = parse_args()
+    test(int(args.test_epoch), int(args.device))

@@ -31,6 +31,8 @@ Once this is run, you can edit whatever you want inside the docker container. In
 
 ```
 python3 single_collect_sm.py --test_epoch 140 --device $DEVICE --video_dir videos
+```
+
 Next:
 * Add directory parameter to read in files
 * Improve coordinate saving

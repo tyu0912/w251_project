@@ -272,73 +272,74 @@ def cdist(x1, y1, x2, y2):
 
     return ((x1 - x2)**2 + (y1 - y2)**2)**0.5
 
-# def test(test_model, device):
+def test(test_model, device):
 
-#     print("Current dir")
-#     print(os.getcwd())
-
-#     to_csv = []
-#     headers = set()
-
-#     tester = Tester(Model(), cfg)
-#     tester.load_weights(test_model)
-    
-#     device = 0
-#     cap = cv2.VideoCapture(1)
-    
-    
-#     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
-#     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
-
-#     last = 0
-
-#     while True:
-
-#         ret, img = cap.read() # Apik
-        
-#         if(time.time() > last + 0.05):
-            
-    
-#             tmpimg, tmpkps = test_net(tester, img)
-
-#             cv2.namedWindow('vis',0)
-#             cv2.imshow('vis', tmpimg[:,:,[2,1,0]])
-#             k=cv2.waitKey(10) & 0xFF
-            
-        
-#         last = time.time()
-
-def capture_frames(test_model, device):
-    import os
-    print("I'm in test. Current dir = ")
-    print(os.getcwd())
-    #vidcap = cv2.VideoCapture('chute04_cam8_1s.m4v')
-    vidcap = cv2.VideoCapture('frames/apik.m4v')
-
-    success,image = vidcap.read()
-    count = 10
-    offset = 0
-    if success:
-        print("Success")
-    else:
-        print("Failed")
     to_csv = []
     headers = set()
 
     tester = Tester(Model(), cfg)
     tester.load_weights(test_model)
+    
+    device = 0
+    cap = cv2.VideoCapture(1)
+    
+    
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
-    while success:
-        success,image = vidcap.read()
-        if offset % 3 == 0:
-            tmpimg, tmpkps = test_net(tester, image)
-            cv2.imwrite("./frames/pose_frame%d.jpg" % count, image)     # save frame as JPEG file 
-            cv2.imwrite("./frames/pose_frame_coords%d.jpg" % count, tmpimg)     # save frame with coordinates
-#            cv2.imwrite("./frame%d.jpg" % count, image)     # save frame as JPEG file
+    last = 0
 
-            print('Read a new frame: ', success)
-            count += 1
-        offset += 1
+    while True:
+
+        ret, img = cap.read() # Apik
+        
+        if(time.time() > last + 0.05):
+            
+    
+            tmpimg, tmpkps = test_net(tester, img)
+
+            cv2.namedWindow('vis',0)
+            cv2.imshow('vis', tmpimg[:,:,[2,1,0]])
+            k=cv2.waitKey(10) & 0xFF
+            
+        
+        last = time.time()
+
+def capture_frames(test_model, device, vid_dir):
+    import os
+    # vid_loc = vid_dir + '/apik.m4v'
+    # print("Vid location = " + str(vid_loc))
+
+    print("Current dir")
+    print(os.getcwd())
+    for filename in os.listdir(vid_dir):
+        if filename.endswith(".m4v"):
+            print("Current file = " + filename)
+            vid_loc = vid_dir + '/' + filename
+            vidcap = cv2.VideoCapture(vid_loc)
+
+            success,image = vidcap.read()
+            count = 10
+            offset = 0
+            if success:
+                print("Success")
+            else:
+                print("Failed")
+            to_csv = []
+            headers = set()
+
+            tester = Tester(Model(), cfg)
+            tester.load_weights(test_model)
+
+            while success:
+                success,image = vidcap.read()
+                if offset % 3 == 0:
+                    tmpimg, tmpkps = test_net(tester, image)
+                    cv2.imwrite("./frames/pose_frame%d.jpg" % count, image)     # save frame as JPEG file 
+                    cv2.imwrite("./frames/pose_frame_coords%d.jpg" % count, tmpimg)     # save frame with coordinates
+                    print('Read a new frame: ', success)
+                    count += 1
+                offset += 1
 
 if __name__ == '__main__':
     def parse_args():
@@ -346,6 +347,7 @@ if __name__ == '__main__':
 
         parser.add_argument('--test_epoch', type=str, dest='test_epoch')
         parser.add_argument('--device', type=int, dest='device')
+        parser.add_argument('--vid_dir', type=str, dest='vid_dir')
         args = parser.parse_args()
         
         assert args.test_epoch, 'Test epoch is required.'
@@ -354,6 +356,6 @@ if __name__ == '__main__':
 
 
     global args
-    args = parse_args()
+    args = parse_args()# AZ
     #test(int(args.test_epoch), int(args.device))
-    capture_frames(int(args.test_epoch), int(args.device)) #AZ
+    capture_frames(int(args.test_epoch), int(args.device), str(args.vid_dir))

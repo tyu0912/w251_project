@@ -46,7 +46,7 @@ from gen_batch_single import generate_batch
 from nms.nms import oks_nms
 
 
-f = open("/posenet-out/camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
+f = open("../camera_capture_output/camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
 #f = open("./camera-{t}.txt".format(t=str(datetime.now().strftime("%Y%m%d%H%m%S"))), 'a+')
 
 headers = ["time","nose-x", "nose-y", "nose-w",
@@ -335,8 +335,8 @@ def capture_frames(test_model, device, vid_dir):
                 success,image = vidcap.read()
                 if offset % 3 == 0:
                     tmpimg, tmpkps = test_net(tester, image)
-                    cv2.imwrite("../frames/pose_frame%d.jpg" % count, image)     # save frame as JPEG file 
-                    cv2.imwrite("../frames/pose_frame_coords%d.jpg" % count, tmpimg)     # save frame with coordinates
+                    cv2.imwrite("../video_processing_output/frames/pose_frame%d.jpg" % count, image)     # save frame as JPEG file 
+                    cv2.imwrite("../video_processing_output/frames/pose_frame_coords%d.jpg" % count, tmpimg)     # save frame with coordinates
                     print('Read a new frame: ', success)
                     count += 1
                 offset += 1

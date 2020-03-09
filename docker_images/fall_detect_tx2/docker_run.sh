@@ -1,8 +1,8 @@
 xhost +
 docker run --privileged \
 	-v /data/fall_detect/video_processing_output/:/usr/src/app/video_processing_output \
+	-v /data/fall_detect/camera_capture_output/:/usr/src/app/camera_capture_output \
 	-v /data/fall_detect/videos:/usr/src/app/videos \
-	-v /data/fall_detect/frames:/usr/src/app/frames \
 	-v /tmp/.X11-unix:/tmp/.X11-unix \
 	-v /data/fall_detect/video_preprocessing/ \
 	-v /data/fall_detect/models/COCO:/usr/src/app/output/model_dump/COCO/ \

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#Taken from https://github.com/spmallick/learnopencv/blob/master/InstallScripts/installOpenCV-4-on-Ubuntu-18-04.sh
+
 echo "OpenCV installation by learnOpenCV.com"
 # Define OpenCV Version to install 
 cvVersion="master"

@@ -1,0 +1,105 @@
+# We run an ubuntu arm64v8-based
+FROM ubuntu
+
+######### Step 0
+######### Setup
+# base URL for NVIDIA libs
+ARG URL=http://169.44.201.108:7002/jetpacks/4.2
+ARG DEBIAN_FRONTEND=noninteractive
+WORKDIR /
+
+# Install drivers first
+RUN apt-get update
+RUN apt-get install -y software-properties-common
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    python3.6 \
+    python3-pip \
+    python-opencv \
+    python3-opencv \
+    vim \
+    unzip \
+    cmake
+
+
+######### Step 1 
+######### Install opencv 4
+# From https://github.com/AastaNV/JEP/blob/master/script/install_opencv4.1.1_Jetson.sh
+RUN apt-get purge -y --force-yes *libopencv*
+
+# Install requirementS
+RUN apt-get update
+RUN apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+RUN apt-get install -y python2.7-dev python3.6-dev python-dev python-numpy python3-numpy
+RUN apt-get install -y libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libdc1394-22-dev
+RUN apt-get update
+RUN apt-get install -y libv4l-dev v4l-utils qv4l2 v4l2ucp
+RUN apt-get install -y curl
+RUN apt-get update
+
+#Download opencv-4.1.1
+#RUN curl -L https://github.com/opencv/opencv/archive/4.0.0.zip -o opencv-4.0.0.zip
+#RUN curl -L https://github.com/opencv/opencv_contrib/archive/4.0.0.zip -o opencv_contrib-4.0.0.zip
+#RUN unzip opencv-4.0.0.zip
+#RUN unzip opencv_contrib-4.0.0.zip
+#WORKDIR opencv-4.0.0
+
+# Apply patch
+#RUN sed -i 's/include <Eigen\/Core>/include <eigen3\/Eigen\/Core>/g' modules/core/include/opencv2/core/private.hpp
+
+# Building...
+#RUN mkdir release
+#WORKDIR release/
+#RUN cmake -D WITH_CUDA=ON -D CUDA_ARCH_BIN="5.3,6.2,7.2" -D CUDA_ARCH_PTX="" -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-4.1.1/modules -D WITH_GSTREAMER=ON -D WITH_LIBV4L=ON -D BUILD_opencv_python2=ON -D BUILD_opencv_python3=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+#RUN make -j3
+#RUN sudo make install
+#RUN echo 'export PYTHONPATH=$PYTHONPATH:'$PWD'/python_loader/' >> ~/.bashrc
+#RUN source ~/.bashrc
+
+######### Step 3
+######### Set python
+
+RUN export PYTHONPATH=/usr/bin/python3
+
+######### Step 4
+######### Install PyTorch and torchvision
+RUN apt-get install wget
+RUN wget https://nvidia.box.com/shared/static/ncgzus5o23uck9i5oth2n8n06k340l6k.whl -O torch-1.4.0-cp36-cp36m-linux_aarch64.whl
+RUN apt-get install python3-pip -y --force-yes libopenblas-base 
+RUN pip3 install Cython
+RUN pip3 install numpy torch-1.4.0-cp36-cp36m-linux_aarch64.whl
+
+
+######### Step 5
+######### Build TVM
+
+RUN  apt install -y --force-yes llvm # install llvm which is required by tvm
+RUN git clone https://github.com/apache/incubator-tvm.git
+WORKDIR incubator-tvm
+RUN git submodule update --init
+RUN mkdir build
+RUN cp cmake/config.cmake build/
+WORKDIR build
+#[
+#edit config.cmake to change
+# 32 line: USE_CUDA OFF -> USE_CUDA ON
+#104 line: USE_LLVM OFF -> USE_LLVM ON
+#]
+
+
+#RUN cmake ..
+#RUN make -j4
+#WORKDIR ..
+#RUN cd python; sudo python3 setup.py install; cd ..
+#RUN cd topi/python; sudo python3 setup.py install; cd ../..
+
+######### Step 6
+######### Install ONNX
+#RUN sudo apt-get install protobuf-compiler libprotoc-dev
+#RUN pip3 install onnx
+
+######### Step 7
+######### export cuda toolkit binary to path
+#RUN export PATH=$PATH:/usr/local/cuda/bin

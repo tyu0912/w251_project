@@ -16,3 +16,7 @@ COPY pretrained	/temporal-shift-module/pretrained
 
 WORKDIR /temporal-shift-module
 
+RUN mkdir dev_files
+
+RUN apt-get install -y libopencv-dev python3-opencv
+

@@ -92,8 +92,70 @@ class GroupNormalize(object):
         return tensor
 
 
+def process_output(idx_, history):
+    # idx_: the output of current frame
+    # history: a list containing the history of predictions
+    if not REFINE_OUTPUT:
+        return idx_, history
+
+    max_hist_len = 20  # max history buffer
+
+    # mask out illegal action
+    if idx_ in [7, 8, 21, 22, 3]:
+        idx_ = history[-1]
+
+    # use only single no action class
+    if idx_ == 0:
+        idx_ = 2
+    
+    # history smoothing
+    if idx_ != history[-1]:
+        if not (history[-1] == history[-2]): #  and history[-2] == history[-3]):
+            idx_ = history[-1]
+    
+
+    history.append(idx_)
+    history = history[-max_hist_len:]
+
+    return history[-1], history
+
+
+
+catigories = [
+    "Doing other things",  # 0
+    "Drumming Fingers",  # 1
+    "No gesture",  # 2
+    "Pulling Hand In",  # 3
+    "Pulling Two Fingers In",  # 4
+    "Pushing Hand Away",  # 5
+    "Pushing Two Fingers Away",  # 6
+    "Rolling Hand Backward",  # 7
+    "Rolling Hand Forward",  # 8
+    "Shaking Hand",  # 9
+    "Sliding Two Fingers Down",  # 10
+    "Sliding Two Fingers Left",  # 11
+    "Sliding Two Fingers Right",  # 12
+    "Sliding Two Fingers Up",  # 13
+    "Stop Sign",  # 14
+    "Swiping Down",  # 15
+    "Swiping Left",  # 16
+    "Swiping Right",  # 17
+    "Swiping Up",  # 18
+    "Thumb Down",  # 19
+    "Thumb Up",  # 20
+    "Turning Hand Clockwise",  # 21
+    "Turning Hand Counterclockwise",  # 22
+    "Zooming In With Full Hand",  # 23
+    "Zooming In With Two Fingers",  # 24
+    "Zooming Out With Full Hand",  # 25
+    "Zooming Out With Two Fingers"  # 26
+]
+
+
 
 def main():
+
+    index = 0
 
     cropping = torchvision.transforms.Compose([
         GroupScale(256),
@@ -139,13 +201,50 @@ def main():
                     torch.zeros([1, 20, 7, 7]),
                     torch.zeros([1, 20, 7, 7])]
 
+    
+    idx = 0
+    history = [2]
+    history_logit = []
+    history_timing = []
+
     prediction = torch_module(input_var, *shift_buffer)
 
-    #print(prediction)
+    feat, the_buffer = prediction[0], prediction[1:]
+
+    if SOFTMAX_THRES > 0:
+        feat_np = feat.asnumpy().reshape(-1)
+        feat_np -= feat_np.max()
+        softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
+
+        print(max(softmax))
+        
+        if max(softmax) > SOFTMAX_THRES:
+            idx_ = np.argmax(feat.asnumpy(), axis=1)[0]
+        else:
+            idx_ = idx
+    
+    else:
+        idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
+
+
+    if HISTORY_LOGIT:
+        history_logit.append(feat.detach().numpy())
+        history_logit = history_logit[-12:]
+        avg_logit = sum(history_logit)
+        idx_ = np.argmax(avg_logit, axis=1)[0]
+
+    idx, history = process_output(idx_, history)
+
+    print(f"{index} {catigories[idx]}")
+
 
 
 if __name__ == "__main__":
     print("Starting... \n")
+
+    SOFTMAX_THRES = 0
+    HISTORY_LOGIT = True
+    REFINE_OUTPUT = True
 
     main()
 

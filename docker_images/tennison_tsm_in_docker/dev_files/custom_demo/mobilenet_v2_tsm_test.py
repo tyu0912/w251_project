@@ -119,6 +119,7 @@ class InvertedResidualWithShift(nn.Module):
 class MobileNetV2(nn.Module):
     def __init__(self, n_class=1000, input_size=224, width_mult=1.):
         super(MobileNetV2, self).__init__()
+        
         input_channel = 32
         last_channel = 1280
         interverted_residual_setting = [
@@ -134,9 +135,11 @@ class MobileNetV2(nn.Module):
 
         # building first layer
         assert input_size % 32 == 0
+        
         # input_channel = make_divisible(input_channel * width_mult)  # first channel is always 32!
         self.last_channel = make_divisible(last_channel * width_mult) if width_mult > 1.0 else last_channel
         self.features = [conv_bn(3, input_channel, 2)]
+        
         # building inverted residual blocks
         global_idx = 0
         shift_block_idx = [2, 4, 5, 7, 8, 9, 11, 12, 14, 15]
@@ -152,8 +155,10 @@ class MobileNetV2(nn.Module):
                     self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
                     global_idx += 1
                 input_channel = output_channel
+        
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel))
+        
         # make it nn.Sequential
         self.features = nn.ModuleList(self.features)
 

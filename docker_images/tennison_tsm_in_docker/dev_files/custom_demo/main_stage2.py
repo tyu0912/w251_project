@@ -102,15 +102,20 @@ def process_output(idx_, history):
     max_hist_len = 20  # max history buffer
 
     # mask out illegal action
-    if idx_ in [7, 8, 21, 22, 3]:
-        idx_ = history[-1]
+    # TY commented out here
+    #if idx_ in [7, 8, 21, 22, 3]:
+    #    idx_ = history[-1]
 
     # use only single no action class
     if idx_ == 0:
-        idx_ = 2
+        idx_ = 9
     
     # history smoothing
-    if idx_ != history[-1]:
+
+    #print(history[-1])
+    #print(idx_)
+
+    if idx_ != history[-1] and len(history) != 1:
         if not (history[-1] == history[-2]): #  and history[-2] == history[-3]):
             idx_ = history[-1]
     
@@ -152,7 +157,7 @@ def process_output(idx_, history):
 #    "Zooming Out With Two Fingers"  # 26
 #]
 
-catigories = ["Fall", "SalsaSpin", "TaiChi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
 
 
 def main():
@@ -220,7 +225,7 @@ def main():
     t = None    
     index = 0
     idx = 0
-    history = [2]
+    history = [9]
     history_logit = []
     history_timing = []
     i_frame = -1
@@ -239,7 +244,11 @@ def main():
 
             feat, shift_buffer = prediction[0], prediction[1:]
 
+
             if SOFTMAX_THRES > 0:
+
+                print("here??")
+
                 feat_np = feat.asnumpy().reshape(-1)
                 feat_np -= feat_np.max()
 
@@ -254,7 +263,9 @@ def main():
                     idx_ = idx
     
             else:
+                print("No I'm here")
                 idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
+                print(idx_)
 
 
             if HISTORY_LOGIT:

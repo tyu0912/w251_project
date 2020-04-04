@@ -143,8 +143,10 @@ class MobileNetV2(nn.Module):
         # building inverted residual blocks
         global_idx = 0
         shift_block_idx = [2, 4, 5, 7, 8, 9, 11, 12, 14, 15]
+        
         for t, c, n, s in interverted_residual_setting:
             output_channel = make_divisible(c * width_mult) if t > 1 else c
+            
             for i in range(n):
                 if i == 0:
                     block = InvertedResidualWithShift if global_idx in shift_block_idx else InvertedResidual
@@ -154,6 +156,7 @@ class MobileNetV2(nn.Module):
                     block = InvertedResidualWithShift if global_idx in shift_block_idx else InvertedResidual
                     self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
                     global_idx += 1
+                
                 input_channel = output_channel
         
         # building last several layers
@@ -170,15 +173,19 @@ class MobileNetV2(nn.Module):
     def forward(self, x, *shift_buffer):
         shift_buffer_idx = 0
         out_buffer = []
+        
         for f in self.features:
             if isinstance(f, InvertedResidualWithShift):
                 x, s = f(x, shift_buffer[shift_buffer_idx])
                 shift_buffer_idx += 1
                 out_buffer.append(s)
+            
             else:
                 x = f(x)
+        
         x = x.mean(3).mean(2)
         x = self.classifier(x)
+        
         return (x, *out_buffer)
 
     def _initialize_weights(self):

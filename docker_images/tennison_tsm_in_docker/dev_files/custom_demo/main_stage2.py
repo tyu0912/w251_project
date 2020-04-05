@@ -105,7 +105,7 @@ def process_output(idx_, history):
     #if idx_ in [7, 8, 21, 22, 1, 3]:
     #    idx_ = history[-1]
 
-    if idx_ in [21,22]:
+    if idx_ in [1,4,5,6]:
         idx_ = history[-1]
 
     # use only single no action class
@@ -332,7 +332,7 @@ def main():
             
 
             t2 = time.time()
-            #print(f"{index} {catigories[idx]}")
+            print(f"Final {index} Attempt {catigories[idx]}")
 
             
             current_time = t2 - t1
@@ -385,8 +385,8 @@ if __name__ == "__main__":
     print("Starting... \n")
 
     SOFTMAX_THRES = 0
-    HISTORY_LOGIT = False
-    REFINE_OUTPUT = False
+    HISTORY_LOGIT = True
+    REFINE_OUTPUT = True
     WINDOW_NAME = "GESTURE CAPTURE"
 
     main()

@@ -102,9 +102,11 @@ def process_output(idx_, history):
     max_hist_len = 20  # max history buffer
 
     # mask out illegal action
-    # TY commented out here
-    #if idx_ in [7, 8, 21, 22, 3]:
+    #if idx_ in [7, 8, 21, 22, 1, 3]:
     #    idx_ = history[-1]
+
+    if idx_ in [21,22]:
+        idx_ = history[-1]
 
     # use only single no action class
     if idx_ == 0:
@@ -186,10 +188,52 @@ def main():
     
 
     #torch_module.load_state_dict(torch.load("mobilenetv2_jester_online.pth.tar"))
-    torch_module.load_state_dict(torch.load("../../pretrained/ckpt.best.pth.tar"), strict=False)
     #torch_module.load("../../pretrained/ckpt.best.pth.tar")
-    
     #torch_module.load_state_dict(torch.load("../../pretrained/ckpt.best.pth.tar")['state_dict'])
+    #torch_module.load_state_dict(torch.load("../../pretrained/ckpt.pth.tar"))
+
+    #state_dict = torch.load("../../pretrained/ckpt.pth.tar")['state_dict']
+
+    #from collections import OrderedDict
+    #new_state_dict = OrderedDict()
+    
+    #for k, v in state_dict.items():
+    #    name = k[7:] # remove `module.`
+    #    new_state_dict[name] = v
+
+    # load params
+    #torch_module.load_state_dict(new_state_dict)
+
+    model_new = torch.load("../../pretrained/ckpt.best.pth.tar")
+    print(type(model_new['state_dict']))
+
+    model_old = torch.load("mobilenetv2_jester_online.pth.tar")
+    print(type(model_old))
+    
+
+    # Fixing new model parameter mis-match
+    state_dict = model_new['state_dict']
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+
+    for k, v in state_dict.items():
+        #name = k[7:] # remove `module.`
+
+        if "module.base_model." in k:
+            name = k.replace("module.base_model.", "")
+
+            if ".net" in name:
+                name = name.replace(".net", "")
+
+
+        elif "module." in k:
+            name = k.replace("module.new_fc.", "classifier.")
+        
+        new_state_dict[name] = v
+
+    # load params
+    torch_module.load_state_dict(new_state_dict)    
+    #torch_module.load_state_dict(model_old)
 
     torch_module.eval()
 
@@ -225,7 +269,7 @@ def main():
     t = None    
     index = 0
     idx = 0
-    history = [9]
+    history = [1]
     history_logit = []
     history_timing = []
     i_frame = -1
@@ -249,7 +293,7 @@ def main():
 
                 print("here??")
 
-                feat_np = feat.asnumpy().reshape(-1)
+                feat_np = feat.detach().numpy().reshape(-1)
                 feat_np -= feat_np.max()
 
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
@@ -257,15 +301,24 @@ def main():
                 print(max(softmax))
         
                 if max(softmax) > SOFTMAX_THRES:
-                    idx_ = np.argmax(feat.asnumpy(), axis=1)[0]
+                    idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
         
                 else:
                     idx_ = idx
     
             else:
                 print("No I'm here")
-                idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
-                print(idx_)
+                print(feat.detach().numpy())
+                
+                sorted_matches = np.argpartition(feat.detach().numpy()[0], -3)[-3:][::-1]
+                print(sorted_matches)
+
+                #idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
+                idx_ = sorted_matches[0]
+                
+                print(f"1. {feat.detach().numpy()[0][idx_]}, {catigories[idx_]}")
+                print(f"2. {feat.detach().numpy()[0][sorted_matches[1]]}, {catigories[sorted_matches[1]]}")
+                print(f"3. {feat.detach().numpy()[0][sorted_matches[2]]}, {catigories[sorted_matches[2]]}")
 
 
             if HISTORY_LOGIT:
@@ -277,8 +330,9 @@ def main():
 
             idx, history = process_output(idx_, history)
             
+
             t2 = time.time()
-            print(f"{index} {catigories[idx]}")
+            #print(f"{index} {catigories[idx]}")
 
             
             current_time = t2 - t1
@@ -331,8 +385,8 @@ if __name__ == "__main__":
     print("Starting... \n")
 
     SOFTMAX_THRES = 0
-    HISTORY_LOGIT = True
-    REFINE_OUTPUT = True
+    HISTORY_LOGIT = False
+    REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
 
     main()

@@ -12,11 +12,12 @@ RUN pip3 install urllib3
 
 RUN git clone https://github.com/mit-han-lab/temporal-shift-module.git
 
-COPY pretrained	/temporal-shift-module/pretrained
-
 WORKDIR /temporal-shift-module
 
 RUN mkdir dev_files
+RUN mkdir pretrained
+
+COPY pretrained /temporal-shift-module/pretrained
 
 RUN apt-get install -y libopencv-dev python3-opencv
 

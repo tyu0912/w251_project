@@ -59,6 +59,9 @@ class InvertedResidual(nn.Module):
             )
 
     def forward(self, x):
+        #print("Using Inverted Residual")
+
+
         if self.use_res_connect:
             return x + self.conv(x)
         else:
@@ -68,6 +71,7 @@ class InvertedResidualWithShift(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio):
         super(InvertedResidualWithShift, self).__init__()
         self.stride = stride
+
         assert stride in [1, 2]
 
         assert expand_ratio > 1
@@ -91,26 +95,13 @@ class InvertedResidualWithShift(nn.Module):
         )
 
     def forward(self, x, *shift_buffer):
-        #print("Var x is...")
-        #print(type(x))
-        #print(x.size())
+
+        #print("Using InvertedResidualWithShift")
         
         c = x.size(1)
 
-        #print("Var c is...")
-        #print(c)
-
         x1, x2 = x[:, : c // 8], x[:, c // 8:]
         
-        #print("x1 is...")
-        #print(x1)
-
-        #print("x2 is...")
-        #print(x2)
-
-        #print(type(shift_buffer))
-        #print(shift_buffer)
-
         out =  x + self.conv(torch.cat((shift_buffer + (x2,)), dim = 1))
 
         return out, x1
@@ -175,7 +166,9 @@ class MobileNetV2(nn.Module):
         out_buffer = []
         
         for f in self.features:
+            #print(f)
             if isinstance(f, InvertedResidualWithShift):
+                
                 x, s = f(x, shift_buffer[shift_buffer_idx])
                 shift_buffer_idx += 1
                 out_buffer.append(s)
@@ -188,16 +181,20 @@ class MobileNetV2(nn.Module):
         
         return (x, *out_buffer)
 
+
     def _initialize_weights(self):
         for m in self.modules():
+            
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
                 if m.bias is not None:
                     m.bias.data.zero_()
+            
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+            
             elif isinstance(m, nn.Linear):
                 n = m.weight.size(1)
                 m.weight.data.normal_(0, 0.01)

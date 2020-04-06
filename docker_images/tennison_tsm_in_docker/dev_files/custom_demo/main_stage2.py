@@ -165,9 +165,9 @@ def get_categories(num_classes):
 
         catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
 
-    elif num_classes == 2:
+    elif num_classes == 3:
 
-        catigories = ['Fall', "Not Fall"]
+        catigories = ['Fall', "Not Fall", "Test"]
 
 
     return catigories
@@ -176,7 +176,7 @@ def get_categories(num_classes):
 def main(num_classes):
 
 
-    if num_classes not in [2, 10, 27]:
+    if num_classes not in [3, 10, 27]:
         return "Can only handle 2, 10, and 27 classes"
 
     else:
@@ -408,6 +408,6 @@ if __name__ == "__main__":
     WINDOW_NAME = "GESTURE CAPTURE"
 
     #Modify number of classes here
-    main(2)
+    main(3)
 
     print("Done")

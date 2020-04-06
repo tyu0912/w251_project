@@ -102,15 +102,22 @@ def process_output(idx_, history):
     max_hist_len = 20  # max history buffer
 
     # mask out illegal action
-    if idx_ in [7, 8, 21, 22, 3]:
+    #if idx_ in [7, 8, 21, 22, 1, 3]:
+    #    idx_ = history[-1]
+
+    if idx_ in [1,4,5,6]:
         idx_ = history[-1]
 
     # use only single no action class
     if idx_ == 0:
-        idx_ = 2
+        idx_ = 9
     
     # history smoothing
-    if idx_ != history[-1]:
+
+    #print(history[-1])
+    #print(idx_)
+
+    if idx_ != history[-1] and len(history) != 1:
         if not (history[-1] == history[-2]): #  and history[-2] == history[-3]):
             idx_ = history[-1]
     
@@ -121,40 +128,59 @@ def process_output(idx_, history):
     return history[-1], history
 
 
+def get_categories(num_classes):
 
-catigories = [
-    "Doing other things",  # 0
-    "Drumming Fingers",  # 1
-    "No gesture",  # 2
-    "Pulling Hand In",  # 3
-    "Pulling Two Fingers In",  # 4
-    "Pushing Hand Away",  # 5
-    "Pushing Two Fingers Away",  # 6
-    "Rolling Hand Backward",  # 7
-    "Rolling Hand Forward",  # 8
-    "Shaking Hand",  # 9
-    "Sliding Two Fingers Down",  # 10
-    "Sliding Two Fingers Left",  # 11
-    "Sliding Two Fingers Right",  # 12
-    "Sliding Two Fingers Up",  # 13
-    "Stop Sign",  # 14
-    "Swiping Down",  # 15
-    "Swiping Left",  # 16
-    "Swiping Right",  # 17
-    "Swiping Up",  # 18
-    "Thumb Down",  # 19
-    "Thumb Up",  # 20
-    "Turning Hand Clockwise",  # 21
-    "Turning Hand Counterclockwise",  # 22
-    "Zooming In With Full Hand",  # 23
-    "Zooming In With Two Fingers",  # 24
-    "Zooming Out With Full Hand",  # 25
-    "Zooming Out With Two Fingers"  # 26
-]
+    if num_classes == 27:
+        catigories = [
+        "Doing other things",  # 0
+        "Drumming Fingers",  # 1
+        "No gesture",  # 2
+        "Pulling Hand In",  # 3
+        "Pulling Two Fingers In",  # 4
+        "Pushing Hand Away",  # 5
+        "Pushing Two Fingers Away",  # 6
+        "Rolling Hand Backward",  # 7
+        "Rolling Hand Forward",  # 8
+        "Shaking Hand",  # 9
+        "Sliding Two Fingers Down",  # 10
+        "Sliding Two Fingers Left",  # 11
+        "Sliding Two Fingers Right",  # 12
+        "Sliding Two Fingers Up",  # 13
+        "Stop Sign",  # 14
+        "Swiping Down",  # 15
+        "Swiping Left",  # 16
+        "Swiping Right",  # 17
+        "Swiping Up",  # 18
+        "Thumb Down",  # 19
+        "Thumb Up",  # 20
+        "Turning Hand Clockwise",  # 21
+        "Turning Hand Counterclockwise",  # 22
+        "Zooming In With Full Hand",  # 23
+        "Zooming In With Two Fingers",  # 24
+        "Zooming Out With Full Hand",  # 25
+        "Zooming Out With Two Fingers"  # 26
+    ]
+
+    elif num_classes == 10:
+
+        catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+
+    elif num_classes == 3:
+
+        catigories = ['Fall', "Not Fall", "Test"]
 
 
+    return catigories
 
-def main():
+
+def main(num_classes):
+
+
+    if num_classes not in [3, 10, 27]:
+        return "Can only handle 2, 10, and 27 classes"
+
+    else:
+        catigories = get_categories(num_classes)
 
     cropping = torchvision.transforms.Compose([
         GroupScale(256),
@@ -170,7 +196,7 @@ def main():
     ])
 
 
-    torch_module = MobileNetV2(n_class=27)
+    torch_module = MobileNetV2(n_class=num_classes)
 
 
     if not os.path.exists("mobilenetv2_jester_online.pth.tar"):  # checkpoint not downloaded
@@ -179,18 +205,59 @@ def main():
         urllib.request.urlretrieve(url, './mobilenetv2_jester_online.pth.tar')
     
 
-    torch_module.load_state_dict(torch.load("mobilenetv2_jester_online.pth.tar"))
-    torch_module.eval()
+    #torch_module.load_state_dict(torch.load("mobilenetv2_jester_online.pth.tar"))
+    #torch_module.load("../../pretrained/ckpt.best.pth.tar")
+    #torch_module.load_state_dict(torch.load("../../pretrained/ckpt.best.pth.tar")['state_dict'])
+    #torch_module.load_state_dict(torch.load("../../pretrained/ckpt.pth.tar"))
 
+    #state_dict = torch.load("../../pretrained/ckpt.pth.tar")['state_dict']
 
-    # AZ - Getting frames from local video
+    #from collections import OrderedDict
+    #new_state_dict = OrderedDict()
+    
+    #for k, v in state_dict.items():
+    #    name = k[7:] # remove `module.`
+    #    new_state_dict[name] = v
 
-    #cap = cv2.VideoCapture(1)
-    cap = cv2.VideoCapture('./zorian_hand.m4v')
+    # load params
+    #torch_module.load_state_dict(new_state_dict)
 
+    model_new = torch.load("../../temporal-shift-module/pretrained/ckpt.best.pth.tar")
+    print(type(model_new['state_dict']))
+
+    model_old = torch.load("mobilenetv2_jester_online.pth.tar")
+    print(type(model_old))
     
 
+    # Fixing new model parameter mis-match
+    state_dict = model_new['state_dict']
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
 
+    for k, v in state_dict.items():
+        #name = k[7:] # remove `module.`
+
+        if "module.base_model." in k:
+            name = k.replace("module.base_model.", "")
+
+            if ".net" in name:
+                name = name.replace(".net", "")
+
+
+        elif "module." in k:
+            name = k.replace("module.new_fc.", "classifier.")
+        
+        new_state_dict[name] = v
+
+    # load params
+    torch_module.load_state_dict(new_state_dict)    
+    #torch_module.load_state_dict(model_old)
+
+    torch_module.eval()
+
+    #cap = cv2.VideoCapture(1)
+
+    cap = cv2.VideoCapture('./v_HulaHoop_g03_c01.val.avi')
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -201,10 +268,10 @@ def main():
 
     
     full_screen = False
-    # cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow(WINDOW_NAME, 640, 480)
-    # cv2.moveWindow(WINDOW_NAME, 0, 0)
-    # cv2.setWindowTitle(WINDOW_NAME, WINDOW_NAME)
+    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WINDOW_NAME, 640, 480)
+    cv2.moveWindow(WINDOW_NAME, 0, 0)
+    cv2.setWindowTitle(WINDOW_NAME, WINDOW_NAME)
 
 
     shift_buffer = [torch.zeros([1, 3, 56, 56]),
@@ -222,22 +289,21 @@ def main():
     t = None    
     index = 0
     idx = 0
-    history = [2]
+    history = [1]
     history_logit = []
     history_timing = []
     i_frame = -1
 
-    success,image = cap.read()
+    #while True:
+    success,img = cap.read()
 
     while success:
         
         i_frame += 1
         #_, img = cap.read()  # (480, 640, 3) 0 ~ 255
-        success,img = cap.read()
-        cv2.imwrite("./frames/frame%d.jpg" % i_frame, img)     # save frame as JPEG file      
-        print('Read a new frame: ', success)
 
-        if i_frame % 5 == 0:
+
+        if i_frame % 3 == 0:
             t1 = time.time()
             img_tran = transform([Image.fromarray(img).convert('RGB')])
             input_var = torch.autograd.Variable(img_tran.view(1, 3, img_tran.size(1), img_tran.size(2)))
@@ -246,8 +312,12 @@ def main():
 
             feat, shift_buffer = prediction[0], prediction[1:]
 
+
             if SOFTMAX_THRES > 0:
-                feat_np = feat.asnumpy().reshape(-1)
+
+                print("here??")
+
+                feat_np = feat.detach().numpy().reshape(-1)
                 feat_np -= feat_np.max()
 
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
@@ -255,14 +325,29 @@ def main():
                 print(max(softmax))
         
                 if max(softmax) > SOFTMAX_THRES:
-                    idx_ = np.argmax(feat.asnumpy(), axis=1)[0]
+                    idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
         
                 else:
                     idx_ = idx
     
             else:
-                idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
+                coefs = feat.detach().numpy()[0]
+                
+                #print("coefs = " + str(coefs))
+                ind = np.argpartition(coefs, -3)[-3:]                
+                sorted_matches = ind[np.argsort(coefs[ind])] # these are reverse sorted, but not worth reversing 
 
+                # print(sorted_matches)                
+
+                # Top indx
+                idx_ = sorted_matches[2]
+                
+                print(f"1. {catigories[idx_]}, {round(coefs[idx_],4)}")
+                print(f"2. {catigories[sorted_matches[1]]}, {round(coefs[sorted_matches[1]],4)}")
+                print(f"3. {catigories[sorted_matches[0]]}, {round(coefs[sorted_matches[0]],4)}")
+
+
+            # Check history, average it out
 
             if HISTORY_LOGIT:
                 history_logit.append(feat.detach().numpy())
@@ -273,40 +358,43 @@ def main():
 
             idx, history = process_output(idx_, history)
             
+
             t2 = time.time()
-            print(f"{index} {catigories[idx]}")
+            print(f"Prediction @ Frame {index}: {catigories[idx]}")
+            print("\n")
 
             
             current_time = t2 - t1
 
-        
-        img = cv2.resize(img, (640, 480))
-        img = img[:, ::-1]
-        height, width, _ = img.shape
-        label = np.zeros([height // 10, width, 3]).astype('uint8') + 255
+        if success:
 
-        # cv2.putText(label, 'Prediction: ' + catigories[idx], (0, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-        # cv2.putText(label, '{:.1f} Vid/s'.format(1 / current_time), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+            img = cv2.resize(img, (640, 480))
+            img = img[:, ::-1]
+            height, width, _ = img.shape
+            label = np.zeros([height // 10, width, 3]).astype('uint8') + 255
 
-        img = np.concatenate((img, label), axis=0)
-        #cv2.imshow(WINDOW_NAME, img)
+            cv2.putText(label, 'Prediction: ' + catigories[idx], (0, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+            cv2.putText(label, '{:.1f} Vid/s'.format(1 / current_time), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
-        key = cv2.waitKey(1)
+            img = np.concatenate((img, label), axis=0)
+            cv2.imshow(WINDOW_NAME, img)
 
-        # if key & 0xFF == ord('q') or key == 27:  # exit
-        #     break
-        
-        # elif key == ord('F') or key == ord('f'):  # full screen
-        #     print('Changing full screen option!')
+            key = cv2.waitKey(1)
+
+            if key & 0xFF == ord('q') or key == 27:  # exit
+                break
             
-        #     full_screen = not full_screen
-            
-        #     if full_screen:
-        #         print('Setting FS!!!')
-        #         cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            
-        #     else:
-        #         cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+            elif key == ord('F') or key == ord('f'):  # full screen
+                print('Changing full screen option!')
+                
+                full_screen = not full_screen
+                
+                if full_screen:
+                    print('Setting FS!!!')
+                    cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                
+                else:
+                    cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
 
 
         if t is None:
@@ -316,7 +404,9 @@ def main():
             nt = time.time()
             index += 1
             t = nt
-
+        
+        # Next frame
+        success,img = cap.read()
 
     cap.release()
     cv2.destroyAllWindows()
@@ -331,6 +421,8 @@ if __name__ == "__main__":
     REFINE_OUTPUT = True
     WINDOW_NAME = "GESTURE CAPTURE"
 
-    main()
+    #Modify number of classes here
+    #main(3)
+    main(10)
 
     print("Done")

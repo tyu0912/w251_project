@@ -128,41 +128,59 @@ def process_output(idx_, history):
     return history[-1], history
 
 
+def get_categories(num_classes):
 
-#catigories = [
-#    "Doing other things",  # 0
-#    "Drumming Fingers",  # 1
-#    "No gesture",  # 2
-#    "Pulling Hand In",  # 3
-#    "Pulling Two Fingers In",  # 4
-#    "Pushing Hand Away",  # 5
-#    "Pushing Two Fingers Away",  # 6
-#    "Rolling Hand Backward",  # 7
-#    "Rolling Hand Forward",  # 8
-#    "Shaking Hand",  # 9
-#    "Sliding Two Fingers Down",  # 10
-#    "Sliding Two Fingers Left",  # 11
-#    "Sliding Two Fingers Right",  # 12
-#    "Sliding Two Fingers Up",  # 13
-#    "Stop Sign",  # 14
-#    "Swiping Down",  # 15
-#    "Swiping Left",  # 16
-#    "Swiping Right",  # 17
-#    "Swiping Up",  # 18
-#    "Thumb Down",  # 19
-#    "Thumb Up",  # 20
-#    "Turning Hand Clockwise",  # 21
-#    "Turning Hand Counterclockwise",  # 22
-#    "Zooming In With Full Hand",  # 23
-#    "Zooming In With Two Fingers",  # 24
-#    "Zooming Out With Full Hand",  # 25
-#    "Zooming Out With Two Fingers"  # 26
-#]
+    if num_classes == 27:
+        catigories = [
+        "Doing other things",  # 0
+        "Drumming Fingers",  # 1
+        "No gesture",  # 2
+        "Pulling Hand In",  # 3
+        "Pulling Two Fingers In",  # 4
+        "Pushing Hand Away",  # 5
+        "Pushing Two Fingers Away",  # 6
+        "Rolling Hand Backward",  # 7
+        "Rolling Hand Forward",  # 8
+        "Shaking Hand",  # 9
+        "Sliding Two Fingers Down",  # 10
+        "Sliding Two Fingers Left",  # 11
+        "Sliding Two Fingers Right",  # 12
+        "Sliding Two Fingers Up",  # 13
+        "Stop Sign",  # 14
+        "Swiping Down",  # 15
+        "Swiping Left",  # 16
+        "Swiping Right",  # 17
+        "Swiping Up",  # 18
+        "Thumb Down",  # 19
+        "Thumb Up",  # 20
+        "Turning Hand Clockwise",  # 21
+        "Turning Hand Counterclockwise",  # 22
+        "Zooming In With Full Hand",  # 23
+        "Zooming In With Two Fingers",  # 24
+        "Zooming Out With Full Hand",  # 25
+        "Zooming Out With Two Fingers"  # 26
+    ]
 
-catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+    elif num_classes == 10:
+
+        catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+
+    elif num_classes == 2:
+
+        catigories = ['Fall', "Not Fall"]
 
 
-def main():
+    return catigories
+
+
+def main(num_classes):
+
+
+    if num_classes not in [2, 10, 27]:
+        return "Can only handle 2, 10, and 27 classes"
+
+    else:
+        catigories = get_categories(num_classes)
 
     cropping = torchvision.transforms.Compose([
         GroupScale(256),
@@ -178,7 +196,7 @@ def main():
     ])
 
 
-    torch_module = MobileNetV2(n_class=10)
+    torch_module = MobileNetV2(n_class=num_classes)
 
 
     if not os.path.exists("mobilenetv2_jester_online.pth.tar"):  # checkpoint not downloaded
@@ -237,7 +255,7 @@ def main():
 
     torch_module.eval()
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -389,6 +407,7 @@ if __name__ == "__main__":
     REFINE_OUTPUT = True
     WINDOW_NAME = "GESTURE CAPTURE"
 
-    main()
+    #Modify number of classes here
+    main(2)
 
     print("Done")

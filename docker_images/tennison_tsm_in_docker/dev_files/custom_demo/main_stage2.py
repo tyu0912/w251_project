@@ -197,7 +197,7 @@ def main(num_classes):
 
 
     torch_module = MobileNetV2(n_class=num_classes)
-
+    #torch_module = torch.load("TSM_kinetics_RGB_mobilenetv2_shift8_blockres_avg_segment8_e100_dense.pth")
 
     if not os.path.exists("mobilenetv2_jester_online.pth.tar"):  # checkpoint not downloaded
         print('Downloading PyTorch checkpoint...')
@@ -222,7 +222,7 @@ def main(num_classes):
     # load params
     #torch_module.load_state_dict(new_state_dict)
 
-    model_new = torch.load("../../pretrained/ckpt.best.pth.tar")
+    model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     print(type(model_new['state_dict']))
 
     model_old = torch.load("mobilenetv2_jester_online.pth.tar")
@@ -231,27 +231,30 @@ def main(num_classes):
 
     # Fixing new model parameter mis-match
     state_dict = model_new['state_dict']
-    from collections import OrderedDict
-    new_state_dict = OrderedDict()
+    #from collections import OrderedDict
+    #new_state_dict = OrderedDict()
 
-    for k, v in state_dict.items():
+    #for k, v in state_dict.items():
         #name = k[7:] # remove `module.`
 
-        if "module.base_model." in k:
-            name = k.replace("module.base_model.", "")
+    #    if "module.base_model." in k:
+    #        name = k.replace("module.base_model.", "")
 
-            if ".net" in name:
-                name = name.replace(".net", "")
+    #        if ".net" in name:
+    #            name = name.replace(".net", "")
 
 
-        elif "module." in k:
-            name = k.replace("module.new_fc.", "classifier.")
+    #    elif "module." in k:
+    #        name = k.replace("module.new_fc.", "classifier.")
         
-        new_state_dict[name] = v
+    #    new_state_dict[name] = v
 
     # load params
-    torch_module.load_state_dict(new_state_dict)    
+    #torch_module.load_state_dict(new_state_dict)    
     #torch_module.load_state_dict(model_old)
+    torch_module.load_state_dict(state_dict)
+    
+
 
     torch_module.eval()
 
@@ -408,6 +411,6 @@ if __name__ == "__main__":
     WINDOW_NAME = "GESTURE CAPTURE"
 
     #Modify number of classes here
-    main(3)
+    main(10)
 
     print("Done")

@@ -210,7 +210,7 @@ def main(num_classes):
     #model_new = torch.load("../../temporal-shift-module/pretrained/ckpt.best.pth.tar")
     #model_new = torch.load("../../pretrained/ckpt.best.pth.tar")
 
-    model_new = torch.load("../../temporal-shift-module/pretrained/2_class/ckpt.best.pth.tar")
+    model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
 
 
     print(type(model_new['state_dict']))

@@ -1,7 +1,9 @@
 import sys
 sys.path.insert(1, '/temporal-shift-module/online_demo')
 
-from mobilenet_v2_tsm_test import MobileNetV2
+#from mobilenet_v2_tsm_test import MobileNetV2
+from arch_mobilenetv2 import MobileNetV2
+
 from PIL import Image
 import urllib.request
 import os
@@ -93,29 +95,24 @@ class GroupNormalize(object):
         return tensor
 
 
-def process_output(idx_, history):
+def process_output(idx_, history, num_classes):
     # idx_: the output of current frame
     # history: a list containing the history of predictions
     if not REFINE_OUTPUT:
         return idx_, history
 
-    max_hist_len = 20  # max history buffer
+    max_hist_len = int((20/27)*num_classes) # max history buffer
 
     # mask out illegal action
-    #if idx_ in [7, 8, 21, 22, 1, 3]:
-    #    idx_ = history[-1]
-
-    if idx_ in [1,4,5,6]:
+    if idx_ in [7, 8, 21, 22, 1, 3]:
         idx_ = history[-1]
+
 
     # use only single no action class
     if idx_ == 0:
-        idx_ = 9
+        idx_ = 2
     
     # history smoothing
-
-    #print(history[-1])
-    #print(idx_)
 
     if idx_ != history[-1] and len(history) != 1:
         if not (history[-1] == history[-2]): #  and history[-2] == history[-3]):
@@ -161,9 +158,9 @@ def get_categories(num_classes):
         "Zooming Out With Two Fingers"  # 26
     ]
 
-    elif num_classes == 10:
+    elif num_classes == 9 or num_classes == 10:
 
-        catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+        catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog"]
 
     elif num_classes == 3:
 
@@ -176,7 +173,7 @@ def get_categories(num_classes):
 def main(num_classes):
 
 
-    if num_classes not in [3, 10, 27]:
+    if num_classes not in [3, 9, 10, 27]:
         return "Can only handle 2, 10, and 27 classes"
 
     else:
@@ -197,75 +194,56 @@ def main(num_classes):
 
 
     torch_module = MobileNetV2(n_class=num_classes)
-    #torch_module = torch.load("TSM_kinetics_RGB_mobilenetv2_shift8_blockres_avg_segment8_e100_dense.pth")
+    #print(torch_module.state_dict().keys())
 
-    if not os.path.exists("mobilenetv2_jester_online.pth.tar"):  # checkpoint not downloaded
-        print('Downloading PyTorch checkpoint...')
-        url = 'https://hanlab.mit.edu/projects/tsm/models/mobilenetv2_jester_online.pth.tar'
-        urllib.request.urlretrieve(url, './mobilenetv2_jester_online.pth.tar')
+    if num_classes == 27:
+        if not os.path.exists("mobilenetv2_jester_online.pth.tar"):  # checkpoint not downloaded
+            print('Downloading PyTorch checkpoint...')
+            url = 'https://hanlab.mit.edu/projects/tsm/models/mobilenetv2_jester_online.pth.tar'
+            urllib.request.urlretrieve(url, './mobilenetv2_jester_online.pth.tar')
     
 
-    #torch_module.load_state_dict(torch.load("mobilenetv2_jester_online.pth.tar"))
-    #torch_module.load("../../pretrained/ckpt.best.pth.tar")
-    #torch_module.load_state_dict(torch.load("../../pretrained/ckpt.best.pth.tar")['state_dict'])
-    #torch_module.load_state_dict(torch.load("../../pretrained/ckpt.pth.tar"))
+        torch_module.load_state_dict(torch.load("mobilenetv2_jester_online.pth.tar"))
 
-    #state_dict = torch.load("../../pretrained/ckpt.pth.tar")['state_dict']
 
-    #from collections import OrderedDict
-    #new_state_dict = OrderedDict()
+    else:
+
+        model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
-    #for k, v in state_dict.items():
-    #    name = k[7:] # remove `module.`
-    #    new_state_dict[name] = v
-
-    # load params
-    #torch_module.load_state_dict(new_state_dict)
-
-    model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
-    print(type(model_new['state_dict']))
-
-    model_old = torch.load("mobilenetv2_jester_online.pth.tar")
-    print(type(model_old))
+        # Fixing new model parameter mis-match
+        state_dict = model_new['state_dict']
+        #print(state_dict.keys())
     
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
 
-    # Fixing new model parameter mis-match
-    state_dict = model_new['state_dict']
-    #from collections import OrderedDict
-    #new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            #name = k[7:] # remove `module.`
 
-    #for k, v in state_dict.items():
-        #name = k[7:] # remove `module.`
+            if "module.base_model." in k:
+                name = k.replace("module.base_model.", "")
 
-    #    if "module.base_model." in k:
-    #        name = k.replace("module.base_model.", "")
-
-    #        if ".net" in name:
-    #            name = name.replace(".net", "")
+                if ".net" in name:
+                    name = name.replace(".net", "")
 
 
-    #    elif "module." in k:
-    #        name = k.replace("module.new_fc.", "classifier.")
+            elif "module." in k:
+                name = k.replace("module.new_fc.", "classifier.")
         
-    #    new_state_dict[name] = v
 
-    # load params
-    #torch_module.load_state_dict(new_state_dict)    
-    #torch_module.load_state_dict(model_old)
-    torch_module.load_state_dict(state_dict)
-    
+            new_state_dict[name] = v
+
+        # load params
+        torch_module.load_state_dict(new_state_dict)
 
 
     torch_module.eval()
 
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
-
-    #img = '../../videos_rolling/000033.jpg'
-    #img = Image.open(img)  
 
     
     full_screen = False
@@ -290,7 +268,7 @@ def main(num_classes):
     t = None    
     index = 0
     idx = 0
-    history = [1]
+    history = [2]
     history_logit = []
     history_timing = []
     i_frame = -1
@@ -300,19 +278,19 @@ def main(num_classes):
         i_frame += 1
         _, img = cap.read()  # (480, 640, 3) 0 ~ 255
 
-        if i_frame % 2 == 0:
+        if i_frame % 1 == 0:
             t1 = time.time()
             img_tran = transform([Image.fromarray(img).convert('RGB')])
             input_var = torch.autograd.Variable(img_tran.view(1, 3, img_tran.size(1), img_tran.size(2)))
 
-            prediction = torch_module(input_var, *shift_buffer)
+            #prediction = torch_module(input_var, *shift_buffer) #demo mobilenet
+            prediction = torch_module(input_var) #arch mobilenet
+
 
             feat, shift_buffer = prediction[0], prediction[1:]
 
 
             if SOFTMAX_THRES > 0:
-
-                print("here??")
 
                 feat_np = feat.detach().numpy().reshape(-1)
                 feat_np -= feat_np.max()
@@ -328,28 +306,19 @@ def main(num_classes):
                     idx_ = idx
     
             else:
-                print("No I'm here")
                 print(feat.detach().numpy())
-                
-                sorted_matches = np.argpartition(feat.detach().numpy()[0], -3)[-3:][::-1]
-                print(sorted_matches)
-
-                #idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
-                idx_ = sorted_matches[0]
-                
-                print(f"1. {feat.detach().numpy()[0][idx_]}, {catigories[idx_]}")
-                print(f"2. {feat.detach().numpy()[0][sorted_matches[1]]}, {catigories[sorted_matches[1]]}")
-                print(f"3. {feat.detach().numpy()[0][sorted_matches[2]]}, {catigories[sorted_matches[2]]}")
+                #idx_ = np.argmax(feat.detach().numpy(), axis=1)[0] For demo mobilenet
+                idx_ = np.argmax(feat.detach().numpy()) # For archnet mobilenet
 
 
             if HISTORY_LOGIT:
                 history_logit.append(feat.detach().numpy())
-                history_logit = history_logit[-12:]
+                history_logit = history_logit[-int(12/27*num_classes):]
                 avg_logit = sum(history_logit)
-                idx_ = np.argmax(avg_logit, axis=1)[0]
+                #idx_ = np.argmax(avg_logit, axis=1)[0] For demo mobilenet
+                idx_ = np.argmax(avg_logit)  #For archnet mobilenet
 
-
-            idx, history = process_output(idx_, history)
+            idx, history = process_output(idx_, history, num_classes)
             
 
             t2 = time.time()
@@ -406,11 +375,11 @@ if __name__ == "__main__":
     print("Starting... \n")
 
     SOFTMAX_THRES = 0
-    HISTORY_LOGIT = True
-    REFINE_OUTPUT = True
+    HISTORY_LOGIT = False
+    REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
 
     #Modify number of classes here
-    main(10)
+    main(9)
 
     print("Done")

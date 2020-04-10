@@ -104,13 +104,21 @@ def process_output(idx_, history, num_classes):
     max_hist_len = int((20/27)*num_classes) # max history buffer
 
     # mask out illegal action
-    if idx_ in [7, 8, 21, 22, 1, 3]:
-        idx_ = history[-1]
+    
+    if num_classes == 27:
+        if idx_ in [7, 8, 21, 22, 1, 3]:
+            idx_ = history[-1]
 
+        if idx_ == 0:
+            idx_ = 2
 
     # use only single no action class
-    if idx_ == 0:
-        idx_ = 2
+    elif num_classes == 3: 
+        if idx_ in [2]:
+            idx_ = history[-1]
+        
+        if idx_ == 0:
+            idx_ = 0
     
     # history smoothing
 
@@ -158,13 +166,21 @@ def get_categories(num_classes):
         "Zooming Out With Two Fingers"  # 26
     ]
 
-    elif num_classes == 9 or num_classes == 10:
+    elif num_classes == 9: 
 
         catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog"]
+    
+    elif num_classes == 10:
 
-    elif num_classes == 3:
+        catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+
+    elif num_classes == 3 :
 
         catigories = ['Fall', "Not Fall", "Test"]
+
+    elif num_classes == 2:
+
+        catigories = ["Fall", "Not Fall"]
 
 
     return catigories
@@ -173,7 +189,7 @@ def get_categories(num_classes):
 def main(num_classes):
 
 
-    if num_classes not in [3, 9, 10, 27]:
+    if num_classes not in [2, 3, 9, 10, 27]:
         return "Can only handle 2, 10, and 27 classes"
 
     else:
@@ -207,9 +223,13 @@ def main(num_classes):
 
 
     else:
-
-        model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
+        
+        if num_classes == 9 or num_classes == 10:
+            model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
+        elif num_classes == 2 or num_classes == 3:
+            model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
+
         # Fixing new model parameter mis-match
         state_dict = model_new['state_dict']
         #print(state_dict.keys())
@@ -239,7 +259,7 @@ def main(num_classes):
 
     torch_module.eval()
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -375,11 +395,11 @@ if __name__ == "__main__":
     print("Starting... \n")
 
     SOFTMAX_THRES = 0
-    HISTORY_LOGIT = False
-    REFINE_OUTPUT = False
+    HISTORY_LOGIT = True
+    REFINE_OUTPUT = True
     WINDOW_NAME = "GESTURE CAPTURE"
 
     #Modify number of classes here
-    main(9)
+    main(3)
 
     print("Done")

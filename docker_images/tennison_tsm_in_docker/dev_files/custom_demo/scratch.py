@@ -5,22 +5,23 @@ from arch_mobilenetv2 import MobileNetV2
 #
 #model = torch.load("mobilenetv2_jester_online.pth.tar")
 
-#model = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")['state_dict']
+# Trained 2 category model
+# model = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")['state_dict']
 
 # Trained 9 category model
-# model = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")['state_dict']
+model = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")['state_dict']
 
 # Checkpoint from website
 #model = torch.load("TSM_kinetics_RGB_mobilenetv2_shift8_blockres_avg_segment8_e100_dense.pth")["state_dict"]
 
-#for k,v in model.items():
-#    print(k)
+for k,v in model.items():
+    print(k)
 
 
 ###############
 
-actual_model = MobileNetV2(n_class=10)
-print(actual_model.state_dict().keys())
+#actual_model = MobileNetV2(n_class=10)
+#print(actual_model.state_dict().keys())
 
 #print(len(model_weights))
 #print(len(actual_model.state_dict()))

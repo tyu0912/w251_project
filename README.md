@@ -16,7 +16,9 @@ To help address this, we've developed fall detection software that can be implem
 In addition, we've created a separate repository to house our training scripts. A link to that can be found below along with links to our final report and presentation:
 
 Training Scripts: https://github.com/kevinhanna/temporal-shift-module
+
 Presentation: https://docs.google.com/presentation/d/19RWhdRCnKfmGNrZ4o836lJlcn2LB9AqKMgai3jB8BQM/edit#slide=id.g35f391192_00
+
 Report: https://drive.google.com/a/berkeley.edu/file/d/1YYesC2yK389oRb568UFE7tc5Lwz5MrvS/view?usp=sharing
 
 

@@ -1,57 +1,32 @@
-cookiecutter_test
-==============================
+# W251 Project: Fall Detection on the Edge and in the Cloud
 
-This is the fall detection group project
+Tennison Yu, Stephanie Mather, Apik Zorian, and Kevin Hanna
 
-Project Organization
-------------
+## Introduction: 
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+According to the CDC, one out of five falls is a serious injury such as broken bones, hip fractures or head injuries. In fact, falls cause 95% of hip fractures and are the leading cause of brain-related trauma. Each year, 3 million older people are treated in emergency departments for fall injuries and over 800,000 patients a year are hospitalized. In 2015, the total medical costs for falls totaled more than $50 billion in the US. Medicare and Medicaid shouldered 75% of these costs.<sup>1</sup> 
+
+## Project Organization
+
+
     ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
+    │    │
+    ├── models             <- This folder is currently empty
     │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
+    ├── notebooks          <- This folder is currently emptyu
     │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
+    ├── archives           <- sunsetted prior work and docker images 
     │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
+    ├── docker_images      <- Docker images for project
     │   └── figures        <- Generated graphics and figures to be used in reporting
     │
     ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
     │                         generated with `pip freeze > requirements.txt`
     │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
-    │
-    └── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
+    ├── src                <- this folder is currently empty
+    └── .gitignore         <- files and folders to ignore on push
 
 
---------
+## References
+<sup>1</sup> https://www.cdc.gov/homeandrecreationalsafety/falls/adultfalls.html
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>

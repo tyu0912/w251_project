@@ -13,6 +13,8 @@ import numpy as np
 import cv2
 import time
 
+from matplotlib import pyplot as plt
+
 
 class GroupScale(object):
     """ Rescales the input PIL.Image to the given 'size'.
@@ -172,7 +174,7 @@ def get_categories(num_classes):
     
     elif num_classes == 10:
 
-        catigories = ["Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog", "test"]
+        catigories = ["Test", "Fall", "SalsaSpin", "Taichi", "WallPushups", "WritingOnBoard", "Archery", "Hulahoop", "Nunchucks", "WalkingWithDog"]
 
     elif num_classes == 3 :
 
@@ -292,6 +294,7 @@ def main(num_classes):
     history_logit = []
     history_timing = []
     i_frame = -1
+    tracker = {c:0 for c in catigories}
 
     while True:
         
@@ -346,8 +349,8 @@ def main(num_classes):
 
             
             current_time = t2 - t1
+   
 
-        
         img = cv2.resize(img, (640, 480))
         img = img[:, ::-1]
         height, width, _ = img.shape
@@ -357,6 +360,18 @@ def main(num_classes):
         cv2.putText(label, '{:.1f} Vid/s'.format(1 / current_time), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
         img = np.concatenate((img, label), axis=0)
+
+        if track_labels:
+            tracker[catigories[idx]] += 1
+
+            fig, ax = plt.subplots()
+            plt.bar(tracker.keys(), tracker.values())
+            plt.savefig('plot_fig.png')
+
+            img_plot = cv2.imread('plot_fig.png')
+            img_plot = cv2.resize(img_plot, (img.shape[1], img.shape[0]))
+            img = np.hstack((img, img_plot))
+
         cv2.imshow(WINDOW_NAME, img)
 
         key = cv2.waitKey(1)
@@ -395,9 +410,11 @@ if __name__ == "__main__":
     print("Starting... \n")
 
     SOFTMAX_THRES = 0
-    HISTORY_LOGIT = True
-    REFINE_OUTPUT = True
+    HISTORY_LOGIT = False
+    REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
+    track_labels = True
+
 
     #Modify number of classes here
     main(3)

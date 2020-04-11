@@ -103,16 +103,16 @@ def process_output(idx_, history, num_classes):
 
     max_hist_len = int((20/27)*num_classes) # max history buffer
 
-    # mask out illegal action
     
     if num_classes == 27:
+        # mask out illegal action
         if idx_ in [7, 8, 21, 22, 1, 3]:
             idx_ = history[-1]
 
+        # use only one no action class
         if idx_ == 0:
             idx_ = 2
 
-    # use only single no action class
     elif num_classes == 3: 
         if idx_ in [2]:
             idx_ = history[-1]
@@ -176,7 +176,7 @@ def get_categories(num_classes):
 
     elif num_classes == 3 :
 
-        catigories = ['Fall', "Not Fall", "Test"]
+        catigories = ['Test', "Fall", "Not Fall"]
 
     elif num_classes == 2:
 
@@ -288,7 +288,7 @@ def main(num_classes):
     t = None    
     index = 0
     idx = 0
-    history = [2]
+    history = [0]
     history_logit = []
     history_timing = []
     i_frame = -1

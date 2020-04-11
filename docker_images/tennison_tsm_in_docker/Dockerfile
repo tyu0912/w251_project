@@ -9,6 +9,7 @@ RUN pip3 install  numpy==1.17.0
 RUN pip3 uninstall -y  Pillow
 RUN pip3 install Pillow==6.1.0
 RUN pip3 install urllib3
+RUN pip3 install twilio
 
 RUN git clone https://github.com/mit-han-lab/temporal-shift-module.git
 

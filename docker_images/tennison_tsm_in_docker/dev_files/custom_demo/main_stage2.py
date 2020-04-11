@@ -14,6 +14,8 @@ import cv2
 import time
 
 from matplotlib import pyplot as plt
+from twilio.rest import Client
+
 
 
 class GroupScale(object):
@@ -295,6 +297,7 @@ def main(num_classes):
     history_timing = []
     i_frame = -1
     tracker = {c:0 for c in catigories}
+    history_for_alerts = []
 
     while True:
         
@@ -350,7 +353,16 @@ def main(num_classes):
             
             current_time = t2 - t1
    
+        # This is to send alerts
+        if len(history_for_alerts) > 25:
+            history_for_alerts.pop(0)
 
+        history_for_alerts.append(catigories[idx])
+
+        if history_for_alerts.count("Fall") > int(0.95*25):
+            return True
+
+        # This is to show the camera image and prediction
         img = cv2.resize(img, (640, 480))
         img = img[:, ::-1]
         height, width, _ = img.shape
@@ -361,6 +373,7 @@ def main(num_classes):
 
         img = np.concatenate((img, label), axis=0)
 
+        # This is to also how the graph to track the labels
         if track_labels:
             tracker[catigories[idx]] += 1
 
@@ -413,10 +426,26 @@ if __name__ == "__main__":
     HISTORY_LOGIT = False
     REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
-    track_labels = True
+    track_labels = False
 
 
     #Modify number of classes here
-    main(3)
+    alert = main(3)
+
+    # Your Account Sid and Auth Token from twilio.com/console
+    # DANGER! This is insecure. See http://twil.io/secure
+    if alert:
+        account_sid = 'ACdbfaa05b13c92b8c951ab45088604ad3'
+        auth_token = 'ask_tyu0912'
+        client = Client(account_sid, auth_token)
+
+        message = client.messages.create(
+             body='It seems you have fallen. Emergency professionals are on their way',
+            from_='+12510118300',
+            to='+12483858969'
+        )
+
+        print(message.sid)
+
 
     print("Done")

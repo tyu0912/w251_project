@@ -193,6 +193,18 @@ def get_categories(num_classes):
 
 def main(num_classes):
 
+    print("Initializing model...")
+
+
+
+    # print settings
+    print("Model = MobileNet")
+    print("SOFTMAX_THRESHOLD = " + str(SOFTMAX_THRES))
+    print("HISTORY_LOGIT = " + str(HISTORY_LOGIT))
+    print("CAMERA_FEED = " + str(CAMERA_FEED))
+    print("TWILIO_ALERTS = " + str(SEND_ALERTS))
+
+
 
     if num_classes not in [2, 3, 9, 10, 27]:
         return "Can only handle 2, 3, 9, 10 (Fall) and 27 classes (Gesture)"
@@ -233,8 +245,8 @@ def main(num_classes):
             model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
         elif num_classes == 2 or num_classes == 3:
-            #model_new = torch.load("../../pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
-            model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
+            model_new = torch.load("../../pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
+            #model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
 
         # Fixing new model parameter mis-match
         state_dict = model_new['state_dict']
@@ -262,10 +274,12 @@ def main(num_classes):
         # load params
         torch_module.load_state_dict(new_state_dict)
 
+    # Use GPU if CUDA found
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     torch_module.to(device)
 
+    # Set system in parallel mode
     torch_module = nn.DataParallel(torch_module)
     torch_module.eval()
 
@@ -274,7 +288,7 @@ def main(num_classes):
     if CAMERA_FEED:
         cap = cv2.VideoCapture(1)
     else:
-        cap = cv2.VideoCapture('./ten_0001_(15).train.avi') 
+        cap = cv2.VideoCapture('./zorian_0965.train.avi') 
         # cap = cv2.VideoCapture('./steph_2680_(11).train.avi')
 
     # set a lower resolution for speed up
@@ -320,23 +334,24 @@ def main(num_classes):
         i_frame += 1
         _, img = cap.read()  # (480, 640, 3) 0 ~ 255
 
-        if i_frame % 1 == 0:
+        if i_frame % 2 == 0:
             t1 = time.time()
             img_tran = transform([Image.fromarray(img).convert('RGB')])
             input_var = torch.autograd.Variable(img_tran.view(1, 3, img_tran.size(1), img_tran.size(2)))
 
-            input_var = input_var.to(device)
+            # Send tensor to GPU
+            input_var = input_var.to(device) 
 
-            #prediction = torch_module(input_var, *shift_buffer) #demo mobilenet
             prediction = torch_module(input_var) #arch mobilenet
 
 
             feat, shift_buffer = prediction[0], prediction[1:]
 
-            coefs = feat.cpu().detach().numpy()
+
+            coefs = feat.cpu().detach().numpy() # Move tensor back to CPU to process numpy arrays
             coefs2 = coefs.copy()
 
-
+            # Check 
             if SOFTMAX_THRES > 0:
           
                 feat_np = coefs2.reshape(-1)
@@ -348,9 +363,7 @@ def main(num_classes):
                     
                     idx_ = np.argmax(feat.cpu().detach().numpy())
 
-                    print("GOT SOFTMAX > 0.7")
-                    #print("idx_ = " + str(idx_))
-
+                    #print("GOT SOFTMAX > 0.7")
         
                 else:
                     idx_ = idx
@@ -369,7 +382,7 @@ def main(num_classes):
                 idx_ = np.argmax(feat.cpu().detach().numpy()) # For archnet mobilenet
 
 
-            print("The softmax = " + str(np.round(softmax,2)))
+            #print("The softmax = " + str(np.round(softmax,2)))
 
 
             if HISTORY_LOGIT:
@@ -379,15 +392,13 @@ def main(num_classes):
                 #idx_ = np.argmax(avg_logit, axis=1)[0] For demo mobilenet
                 idx_ = np.argmax(avg_logit)  #For archnet mobilenet
 
-            # print("idx_ = " + str(idx_))
-            # print("idx = " + str(idx))
-
             idx, history = process_output(idx_, history, num_classes)
-            
-
 
             t2 = time.time()
-            print(f"Final {index} Attempt {catigories[idx]}")
+            print(f"Prediction @ Frame {index} : {catigories[np.argmax(feat.cpu().detach().numpy())]}")
+            print("Status: " + str(catigories[idx]))
+            if idx == 1:
+                print("WARNING: POTENTIAL FALL")
 
             running_preds.append(idx)
             current_time = t2 - t1
@@ -397,11 +408,12 @@ def main(num_classes):
                 #print("last 7: " + str(running_preds[-7::]))
                 #print(running_preds[-7::])       
                 if running_preds[-7::].count(1) > 5:
+                    print("5 of last 7 frames were falls")
                     print("ALERT! FALL HAS HAPPENED!!")
                     return True
 
-
-
+        
+        print("")
         # This is to send alerts
         if len(history_for_alerts) > 25:
             history_for_alerts.pop(0)
@@ -472,12 +484,12 @@ def main(num_classes):
 if __name__ == "__main__":
     print("Starting... \n")
 
-    SOFTMAX_THRES = .70
+    SOFTMAX_THRES = .7
     HISTORY_LOGIT = False
     REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
     track_labels = True
-    CAMERA_FEED = True
+    CAMERA_FEED = False
     SEND_ALERTS = False
 
 

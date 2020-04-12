@@ -232,7 +232,8 @@ def main(num_classes):
             model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
         elif num_classes == 2 or num_classes == 3:
-            model_new = torch.load("../../temporal-shift-module/pretrained/2_class/2_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
+            model_new = torch.load("../../temporal-shift-module/pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
+            #model_new = torch.load("../../temporal-shift-module/pretrained/2cat/ckpt.best.pth.tar")
 
         # Fixing new model parameter mis-match
         state_dict = model_new['state_dict']
@@ -268,7 +269,8 @@ def main(num_classes):
     if CAMERA_FEED:
         cap = cv2.VideoCapture(1)
     else:
-        cap = cv2.VideoCapture('./zorian_0965.train.avi')
+        cap = cv2.VideoCapture('./ten_0001_(15).train.avi') 
+        # cap = cv2.VideoCapture('./steph_2680_(11).train.avi')
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -296,7 +298,7 @@ def main(num_classes):
 
     t = None    
     index = 0
-    idx = 0
+    idx = 2 # initialize to NotFall
     history = [0]
     history_logit = []
     history_timing = []
@@ -306,6 +308,7 @@ def main(num_classes):
 
     fall_frame_count = 0
     running_preds = []
+    idx_ = 2 # initialize to NotFall
 
     while True:
         
@@ -324,17 +327,26 @@ def main(num_classes):
             feat, shift_buffer = prediction[0], prediction[1:]
 
             coefs = feat.detach().numpy()
+            coefs2 = coefs.copy()
 
 
             if SOFTMAX_THRES > 0:
 
-                feat_np = feat.detach().numpy().reshape(-1)
+
+                
+                feat_np = coefs2.reshape(-1)
                 feat_np -= feat_np.max()
 
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
         
                 if max(softmax) > SOFTMAX_THRES:
+
+                    
                     idx_ = np.argmax(feat.detach().numpy())
+
+                    print("GOT SOFTMAX > 0.7")
+                    #print("idx_ = " + str(idx_))
+
         
                 else:
                     idx_ = idx
@@ -353,7 +365,7 @@ def main(num_classes):
                 idx_ = np.argmax(feat.detach().numpy()) # For archnet mobilenet
 
 
-            #print("The softmax = " + str(softmax))            
+            print("The softmax = " + str(np.round(softmax,2)))
 
 
             if HISTORY_LOGIT:
@@ -362,6 +374,9 @@ def main(num_classes):
                 avg_logit = sum(history_logit)
                 #idx_ = np.argmax(avg_logit, axis=1)[0] For demo mobilenet
                 idx_ = np.argmax(avg_logit)  #For archnet mobilenet
+
+            # print("idx_ = " + str(idx_))
+            # print("idx = " + str(idx))
 
             idx, history = process_output(idx_, history, num_classes)
             
@@ -379,6 +394,7 @@ def main(num_classes):
                 #print(running_preds[-7::])       
                 if running_preds[-7::].count(1) > 5:
                     print("ALERT! FALL HAS HAPPENED!!")
+                    return True
 
 
 
@@ -452,12 +468,13 @@ def main(num_classes):
 if __name__ == "__main__":
     print("Starting... \n")
 
-    SOFTMAX_THRES = .8
+    SOFTMAX_THRES = .70
     HISTORY_LOGIT = False
     REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
     track_labels = True
     CAMERA_FEED = False
+    SEND_ALERTS = False
 
 
     #Modify number of classes here
@@ -465,14 +482,14 @@ if __name__ == "__main__":
 
     # Your Account Sid and Auth Token from twilio.com/console
     # DANGER! This is insecure. See http://twil.io/secure
-    if alert:
+    if alert and SEND_ALERTS:
         account_sid = 'ACdbfaa05b13c92b8c951ab45088604ad3'
-        auth_token = 'ask_tyu0912'
+        auth_token = '54093a9c451d4237cfcbf9f86deeb34a'
         client = Client(account_sid, auth_token)
 
         message = client.messages.create(
              body='It seems you have fallen. Emergency professionals are on their way',
-            from_='+12510118300',
+            from_='+14154803682',
             to='+12483858969'
         )
 

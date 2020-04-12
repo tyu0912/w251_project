@@ -12,6 +12,7 @@ import torchvision
 import numpy as np
 import cv2
 import time
+import torch.nn as nn
 
 from matplotlib import pyplot as plt
 from twilio.rest import Client
@@ -194,7 +195,7 @@ def main(num_classes):
 
 
     if num_classes not in [2, 3, 9, 10, 27]:
-        return "Can only handle 2, 10, and 27 classes"
+        return "Can only handle 2, 3, 9, 10 (Fall) and 27 classes (Gesture)"
 
     else:
         catigories = get_categories(num_classes)
@@ -232,8 +233,8 @@ def main(num_classes):
             model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
         elif num_classes == 2 or num_classes == 3:
-            model_new = torch.load("../../pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
-            #model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
+            #model_new = torch.load("../../pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
+            model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
 
         # Fixing new model parameter mis-match
         state_dict = model_new['state_dict']
@@ -261,7 +262,11 @@ def main(num_classes):
         # load params
         torch_module.load_state_dict(new_state_dict)
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    torch_module.to(device)
+
+    torch_module = nn.DataParallel(torch_module)
     torch_module.eval()
 
     cap = None
@@ -320,29 +325,28 @@ def main(num_classes):
             img_tran = transform([Image.fromarray(img).convert('RGB')])
             input_var = torch.autograd.Variable(img_tran.view(1, 3, img_tran.size(1), img_tran.size(2)))
 
+            input_var = input_var.to(device)
+
             #prediction = torch_module(input_var, *shift_buffer) #demo mobilenet
             prediction = torch_module(input_var) #arch mobilenet
 
 
             feat, shift_buffer = prediction[0], prediction[1:]
 
-            coefs = feat.detach().numpy()
+            coefs = feat.cpu().detach().numpy()
             coefs2 = coefs.copy()
 
 
             if SOFTMAX_THRES > 0:
-
-
-                
+          
                 feat_np = coefs2.reshape(-1)
                 feat_np -= feat_np.max()
 
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
         
                 if max(softmax) > SOFTMAX_THRES:
-
                     
-                    idx_ = np.argmax(feat.detach().numpy())
+                    idx_ = np.argmax(feat.cpu().detach().numpy())
 
                     print("GOT SOFTMAX > 0.7")
                     #print("idx_ = " + str(idx_))
@@ -362,14 +366,14 @@ def main(num_classes):
 
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
 
-                idx_ = np.argmax(feat.detach().numpy()) # For archnet mobilenet
+                idx_ = np.argmax(feat.cpu().detach().numpy()) # For archnet mobilenet
 
 
             print("The softmax = " + str(np.round(softmax,2)))
 
 
             if HISTORY_LOGIT:
-                history_logit.append(feat.detach().numpy())
+                history_logit.append(feat.cpu().detach().numpy())
                 history_logit = history_logit[-int(12/27*num_classes):]
                 avg_logit = sum(history_logit)
                 #idx_ = np.argmax(avg_logit, axis=1)[0] For demo mobilenet
@@ -473,7 +477,7 @@ if __name__ == "__main__":
     REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
     track_labels = True
-    CAMERA_FEED = False
+    CAMERA_FEED = True
     SEND_ALERTS = False
 
 

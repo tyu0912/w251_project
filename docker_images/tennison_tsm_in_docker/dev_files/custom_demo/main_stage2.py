@@ -232,8 +232,8 @@ def main(num_classes):
             model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
         elif num_classes == 2 or num_classes == 3:
-            model_new = torch.load("../../temporal-shift-module/pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
-            #model_new = torch.load("../../temporal-shift-module/pretrained/2cat/ckpt.best.pth.tar")
+            model_new = torch.load("../../pretrained/2cat/5_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
+            #model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
 
         # Fixing new model parameter mis-match
         state_dict = model_new['state_dict']

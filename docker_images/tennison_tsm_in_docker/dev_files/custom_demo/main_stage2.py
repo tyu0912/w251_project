@@ -232,7 +232,7 @@ def main(num_classes):
             model_new = torch.load("../../pretrained/9cat/ckpt.best.pth.tar")
     
         elif num_classes == 2 or num_classes == 3:
-            model_new = torch.load("../../pretrained/2cat/ckpt.best.pth.tar")
+            model_new = torch.load("../../temporal-shift-module/pretrained/2_class/2_TSM_w251fall_RGB_mobilenetv2_shift8_blockres_avg_segment8_e25/ckpt.best.pth.tar")
 
         # Fixing new model parameter mis-match
         state_dict = model_new['state_dict']
@@ -263,7 +263,12 @@ def main(num_classes):
 
     torch_module.eval()
 
-    cap = cv2.VideoCapture(1)
+    cap = None
+
+    if CAMERA_FEED:
+        cap = cv2.VideoCapture(1)
+    else:
+        cap = cv2.VideoCapture('./zorian_0965.train.avi')
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -299,6 +304,9 @@ def main(num_classes):
     tracker = {c:0 for c in catigories}
     history_for_alerts = []
 
+    fall_frame_count = 0
+    running_preds = []
+
     while True:
         
         i_frame += 1
@@ -315,6 +323,8 @@ def main(num_classes):
 
             feat, shift_buffer = prediction[0], prediction[1:]
 
+            coefs = feat.detach().numpy()
+
 
             if SOFTMAX_THRES > 0:
 
@@ -322,19 +332,28 @@ def main(num_classes):
                 feat_np -= feat_np.max()
 
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
-
-                print(max(softmax))
         
                 if max(softmax) > SOFTMAX_THRES:
-                    idx_ = np.argmax(feat.detach().numpy(), axis=1)[0]
+                    idx_ = np.argmax(feat.detach().numpy())
         
                 else:
                     idx_ = idx
     
-            else:
-                print(feat.detach().numpy())
+            else:                
                 #idx_ = np.argmax(feat.detach().numpy(), axis=1)[0] For demo mobilenet
+
+                coefs2 = coefs.copy()
+                #print("coefs = " + str(coefs))
+
+                feat_np = coefs2.reshape(-1)
+                feat_np -= feat_np.max()
+
+                softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
+
                 idx_ = np.argmax(feat.detach().numpy()) # For archnet mobilenet
+
+
+            #print("The softmax = " + str(softmax))            
 
 
             if HISTORY_LOGIT:
@@ -347,12 +366,22 @@ def main(num_classes):
             idx, history = process_output(idx_, history, num_classes)
             
 
+
             t2 = time.time()
             print(f"Final {index} Attempt {catigories[idx]}")
 
-            
+            running_preds.append(idx)
             current_time = t2 - t1
-   
+
+            # ALERT
+            if len(running_preds) > 7:
+                #print("last 7: " + str(running_preds[-7::]))
+                #print(running_preds[-7::])       
+                if running_preds[-7::].count(1) > 5:
+                    print("ALERT! FALL HAS HAPPENED!!")
+
+
+
         # This is to send alerts
         if len(history_for_alerts) > 25:
             history_for_alerts.pop(0)
@@ -369,7 +398,8 @@ def main(num_classes):
         label = np.zeros([height // 10, width, 3]).astype('uint8') + 255
 
         cv2.putText(label, 'Prediction: ' + catigories[idx], (0, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-        cv2.putText(label, '{:.1f} Vid/s'.format(1 / current_time), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+        #cv2.putText(label, '{:.1f} Vid/s'.format(1 / current_time), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+        cv2.putText(label, 'Frame: {:.1f} '.format(i_frame), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
         img = np.concatenate((img, label), axis=0)
 
@@ -422,11 +452,12 @@ def main(num_classes):
 if __name__ == "__main__":
     print("Starting... \n")
 
-    SOFTMAX_THRES = 0
+    SOFTMAX_THRES = .8
     HISTORY_LOGIT = False
     REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
-    track_labels = False
+    track_labels = True
+    CAMERA_FEED = False
 
 
     #Modify number of classes here

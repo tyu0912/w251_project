@@ -1,8 +1,8 @@
 import sys
 sys.path.insert(1, '/temporal-shift-module/online_demo')
 
-#from mobilenet_v2_tsm_test import MobileNetV2
-from arch_mobilenetv2 import MobileNetV2
+from mobilenet_v2_tsm_test import MobileNetV2
+#from arch_mobilenetv2 import MobileNetV2
 
 from PIL import Image
 import urllib.request
@@ -196,7 +196,6 @@ def main(num_classes):
     print("Initializing model...")
 
 
-
     # print settings
     print("Model = MobileNet")
     print("SOFTMAX_THRESHOLD = " + str(SOFTMAX_THRES))
@@ -289,7 +288,7 @@ def main(num_classes):
         cap = cv2.VideoCapture(1)
     else:
         cap = cv2.VideoCapture('./zorian_0965.train.avi') 
-        # cap = cv2.VideoCapture('./steph_2680_(11).train.avi')
+
 
     # set a lower resolution for speed up
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -328,6 +327,7 @@ def main(num_classes):
     fall_frame_count = 0
     running_preds = []
     idx_ = 2 # initialize to NotFall
+    state = "normal"
 
     while True:
         
@@ -340,13 +340,12 @@ def main(num_classes):
             input_var = torch.autograd.Variable(img_tran.view(1, 3, img_tran.size(1), img_tran.size(2)))
 
             # Send tensor to GPU
-            input_var = input_var.to(device) 
+            input_var = input_var.to(device)
+            #shift_buffer = shift_buffer.to(device)
 
-            prediction = torch_module(input_var) #arch mobilenet
-
+            prediction = torch_module(input_var, *shift_buffer) #remove *shift_buffer if using arch mobilenet
 
             feat, shift_buffer = prediction[0], prediction[1:]
-
 
             coefs = feat.cpu().detach().numpy() # Move tensor back to CPU to process numpy arrays
             coefs2 = coefs.copy()
@@ -355,10 +354,14 @@ def main(num_classes):
             if SOFTMAX_THRES > 0:
           
                 feat_np = coefs2.reshape(-1)
-                feat_np -= feat_np.max()
 
+                print(feat_np)
+
+                feat_np -= feat_np.max()
                 softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
-        
+                
+                print(softmax)
+
                 if max(softmax) > SOFTMAX_THRES:
                     
                     idx_ = np.argmax(feat.cpu().detach().numpy())
@@ -369,17 +372,16 @@ def main(num_classes):
                     idx_ = idx
     
             else:                
-                #idx_ = np.argmax(feat.detach().numpy(), axis=1)[0] For demo mobilenet
+                idx_ = np.argmax(feat.cpu().detach().numpy()[0]) # For demo mobilenet
+                #idx_ = np.argmax(feat.cpu().detach().numpy()) # For archnet mobilenet
 
-                coefs2 = coefs.copy()
+                #coefs2 = coefs.copy()
                 #print("coefs = " + str(coefs))
 
-                feat_np = coefs2.reshape(-1)
-                feat_np -= feat_np.max()
+                #feat_np = coefs2.reshape(-1)
+                #feat_np -= feat_np.max()
 
-                softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
-
-                idx_ = np.argmax(feat.cpu().detach().numpy()) # For archnet mobilenet
+                #softmax = np.exp(feat_np) / np.sum(np.exp(feat_np))
 
 
             #print("The softmax = " + str(np.round(softmax,2)))
@@ -389,39 +391,57 @@ def main(num_classes):
                 history_logit.append(feat.cpu().detach().numpy())
                 history_logit = history_logit[-int(12/27*num_classes):]
                 avg_logit = sum(history_logit)
-                #idx_ = np.argmax(avg_logit, axis=1)[0] For demo mobilenet
-                idx_ = np.argmax(avg_logit)  #For archnet mobilenet
+                idx_ = np.argmax(avg_logit, axis=1)[0] # For demo mobilenet
+                #idx_ = np.argmax(avg_logit)  # For archnet mobilenet
 
             idx, history = process_output(idx_, history, num_classes)
 
             t2 = time.time()
+            
             print(f"Prediction @ Frame {index} : {catigories[np.argmax(feat.cpu().detach().numpy())]}")
             print("Status: " + str(catigories[idx]))
-            if idx == 1:
-                print("WARNING: POTENTIAL FALL")
+            
 
             running_preds.append(idx)
             current_time = t2 - t1
 
-            # ALERT
+            # ALERT Logic 1: If more than 5 Falls captured in last 7 values
             if len(running_preds) > 7:
                 #print("last 7: " + str(running_preds[-7::]))
-                #print(running_preds[-7::])       
-                if running_preds[-7::].count(1) > 5:
+                #print(running_preds[-7::])
+
+                running_preds.pop(0)
+                fall_counts = running_preds.count(1)
+
+                if fall_counts < 3 and state == "warning":
+                    print("RETURNED TO NORMAL STATE")
+                    state = "normal"
+
+                elif fall_counts >=3 and fall_counts <= 5:
+                    
+                    if state == "normal":
+                        print("WARNING: POTENTIAL FALL DETECTED")
+                    
+                    state = "warning"
+                
+                elif fall_counts > 5:
                     print("5 of last 7 frames were falls")
                     print("ALERT! FALL HAS HAPPENED!!")
+                    
                     return True
 
         
         print("")
-        # This is to send alerts
-        if len(history_for_alerts) > 25:
-            history_for_alerts.pop(0)
 
-        history_for_alerts.append(catigories[idx])
+        # ALERT Logic 2 (Inactive): This is to send alerts if number of falls > 0.95*27 (num gesture classes)
+        # if len(history_for_alerts) > 25:
+        #    history_for_alerts.pop(0)
 
-        if history_for_alerts.count("Fall") > int(0.95*25):
-            return True
+        # history_for_alerts.append(catigories[idx])
+
+        # if history_for_alerts.count("Fall") > int(0.95*27):
+        #    return True
+
 
         # This is to show the camera image and prediction
         img = cv2.resize(img, (640, 480))
@@ -430,8 +450,8 @@ def main(num_classes):
         label = np.zeros([height // 10, width, 3]).astype('uint8') + 255
 
         cv2.putText(label, 'Prediction: ' + catigories[idx], (0, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-        #cv2.putText(label, '{:.1f} Vid/s'.format(1 / current_time), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-        cv2.putText(label, 'Frame: {:.1f} '.format(i_frame), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+        cv2.putText(label, 'FR: {:.1f} f/s'.format(1 / current_time), (int((width-170)/2), int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+        cv2.putText(label, 'F#: {:.1f} '.format(i_frame), (width - 170, int(height / 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
         img = np.concatenate((img, label), axis=0)
 
@@ -484,12 +504,12 @@ def main(num_classes):
 if __name__ == "__main__":
     print("Starting... \n")
 
-    SOFTMAX_THRES = .7
+    SOFTMAX_THRES = 0.7
     HISTORY_LOGIT = False
     REFINE_OUTPUT = False
     WINDOW_NAME = "GESTURE CAPTURE"
     track_labels = True
-    CAMERA_FEED = False
+    CAMERA_FEED = True
     SEND_ALERTS = False
 
 

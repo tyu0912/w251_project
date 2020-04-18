@@ -1,4 +1,4 @@
-# Fall Detection on the Edge and in the Cloud
+﻿# Fall Detection on the Edge and in the Cloud
 
 Tennison Yu, Stephanie Mather, Apik Zorian, and Kevin Hanna
 
@@ -27,7 +27,13 @@ Report:
 
 https://drive.google.com/a/berkeley.edu/file/d/1YYesC2yK389oRb568UFE7tc5Lwz5MrvS/view?usp=sharing
 
+## Development Architecture:
 
+<img src="/img/architecture.png">
+
+## Steps to run:
+
+Go to `\docker_images\tennison_tsm_in_docker` then build the container and run. Further instructions can be found in the folder.
 
 ## Project Organization
 
